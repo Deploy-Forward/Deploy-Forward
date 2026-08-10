@@ -11,6 +11,8 @@ every model and every harness, and — when you opt in — the public
 npx --yes deploy-forward@latest usage
 ```
 
+![The deploy-forward live dashboard: eight harnesses scanned, 15.7B tokens read, $9.2K api-equivalent spend, vendor limit lanes, and the model mix](./.github/assets/super-start.png)
+
 ## What's in this repository
 
 | Directory | What it is |

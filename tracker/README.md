@@ -9,6 +9,8 @@ npx --yes deploy-forward@latest usage
 
 Product: **https://deployforward.dev** · Board: **https://leaderboard.deployforward.dev**
 
+![The deploy-forward live dashboard: eight harnesses scanned, 15.7B tokens read, $9.2K api-equivalent spend, vendor limit lanes, and the model mix](https://raw.githubusercontent.com/Deploy-Forward/Deploy-Forward/main/.github/assets/super-start.png)
+
 ## Supported sources
 
 `deploy-forward` reads the session logs your coding agents already write locally —
@@ -108,6 +110,14 @@ npx --yes deploy-forward@latest uninstall    # remove the Claude Code presence h
 - **Privacy as an engineering guarantee** — the wire projection is an explicit field
   whitelist pinned by tests; the full per-hook disclosure is [HOOKS.md](./HOOKS.md)
   and the capture contract is [published](https://github.com/Deploy-Forward/Deploy-Forward/tree/main/contract).
+
+## Roadmap
+
+- **A localhost web UI** for the local views — the same usage, spend, and limit
+  data in a browser dashboard. Coming soon.
+- **Remaining-usage bars for every limit lane** — Claude's 5-hour and weekly lanes
+  currently render as text (window opened / resets at); they should carry the same
+  percent-used bar the Codex and Grok weekly lanes already have.
 
 ## Why track this
 
