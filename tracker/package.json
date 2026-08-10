@@ -38,10 +38,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Deploy-Forward/deploy-forward.git"
+    "url": "git+https://github.com/Deploy-Forward/Deploy-Forward.git"
   },
   "homepage": "https://deployforward.dev",
   "bugs": {
-    "url": "https://github.com/Deploy-Forward/deploy-forward/issues"
+    "url": "https://github.com/Deploy-Forward/Deploy-Forward/issues"
   }
 }
