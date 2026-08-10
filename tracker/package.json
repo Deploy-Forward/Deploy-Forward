@@ -1,7 +1,7 @@
 {
   "name": "deploy-forward",
   "version": "0.23.0",
-  "description": "Deploy Forward tracker — ranks agentic engineers on what they ship. Measures your AI build time, tokens and outcomes locally (Claude Code; Codex next). Metadata only; never your code or prompts.",
+  "description": "Deploy Forward tracker \u2014 ranks agentic engineers on what they ship. Measures your AI build time, tokens and outcomes locally (Claude Code; Codex next). Metadata only; never your code or prompts.",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -35,5 +35,13 @@
     "@types/node": "^22.9.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Deploy-Forward/deploy-forward.git"
+  },
+  "homepage": "https://deployforward.dev",
+  "bugs": {
+    "url": "https://github.com/Deploy-Forward/deploy-forward/issues"
   }
 }

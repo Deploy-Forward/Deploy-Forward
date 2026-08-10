@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report vulnerabilities privately via
-[GitHub security advisories](https://github.com/Deploy-Forward/usage-capture/security/advisories/new)
+[GitHub security advisories](https://github.com/Deploy-Forward/deploy-forward/security/advisories/new)
 rather than a public issue. Reports are read by the maintainer; you should hear back
 within a few days.
 
