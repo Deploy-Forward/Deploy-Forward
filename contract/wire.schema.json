@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Deploy-Forward/tracker/contract/wire.schema.json",
+  "$id": "https://github.com/Deploy-Forward/usage-capture/contract/wire.schema.json",
   "title": "Deploy Forward ingest payload",
   "description": "The capture wire contract: the JSON body a tracker POSTs to {apiBase}/ingest with `Authorization: Bearer <deviceToken>`. Metadata only, by construction: no prompt text, no code, no file names, no working directories, no credentials, no user-typed rates ever appear in this shape. The server treats every field as untrusted input; trust labels are server-derived and never accepted from the wire. Sessions are chunked (100 per request by the reference tracker; the server rejects >500). Optional fields are DROPPED when absent, never null-filled - payload bytes are the upload digest, so field presence is contractual.",
   "type": "object",
