@@ -94,8 +94,8 @@ methodology is published on the Board itself):
 
 | Axis | What it measures |
 | --- | --- |
-| outcomes | Shipped work, outcome-gated: merged PR >> opened PR > commit. |
-| efficiency | Outcomes per unit input. Tokens and sessions appear ONLY here, in the denominator. |
+| deployments | Shipped work, outcome-gated: merged PR >> opened PR > commit. |
+| efficiency | Deployments per unit input. Tokens and sessions appear ONLY here, in the denominator. |
 | quality | PR merge ratio plus a small review signal. Spamming junk PRs lowers it. |
 | consistency | Sustained building (streak and active days), saturating. |
 
