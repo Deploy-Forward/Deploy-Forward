@@ -40,26 +40,41 @@ audit it, fork it. A number you cannot check is a number you should not report.
 
 ## How it works
 
-```
-Your machine: agent session logs (Claude Code, Codex, Grok, pi, OpenClaw,
-              opencode, Hermes, Copilot CLI, Gemini CLI) + hooks for live presence
-        |
-   deploy-forward CLI   parse logs locally -> active/idle -> POST cumulative session totals
-        |  (device-token auth; metadata only, never content)
-        v
-============================== the open/closed seam ==============================
-        v
-   the service's /api/ingest   sanity bounds + idempotent upsert -> session store
-        |
-        v
-   server-side folds   day attribution -> user totals, streaks, Build Score
-        v
-   the Board (public leaderboard) and the Ledger (org spend surfaces)
+```mermaid
+flowchart TB
+    subgraph open["YOUR MACHINE — this repository, MIT"]
+        direction TB
+        logs["Agent session logs<br/>Claude Code · Codex · Grok · pi · OpenClaw<br/>opencode · Hermes · Copilot CLI · Gemini CLI"]
+        hooks["Hooks — live presence"]
+        cli["deploy-forward CLI<br/>parse locally → active/idle → cumulative session totals"]
+        logs --> cli
+        hooks --> cli
+    end
+
+    cli == "POST /api/ingest — device-token auth<br/>metadata only, never content" ==> ingest
+
+    subgraph closed["THE CLOSED SERVICE — hostile-client assumption"]
+        direction TB
+        ingest["Ingest — sanity bounds · idempotent upsert"]
+        store[("Session store")]
+        folds["Server-side folds<br/>day attribution → totals · streaks · Build Score"]
+        board["The Board<br/>public leaderboard"]
+        ledger["The Ledger<br/>org spend surfaces"]
+        ingest --> store --> folds
+        folds --> board
+        folds --> ledger
+    end
+
+    classDef openBox fill:transparent,stroke:#2f9e44,stroke-width:2px
+    classDef closedBox fill:transparent,stroke:#868e96,stroke-width:2px,stroke-dasharray:6 4
+    class open openBox
+    class closed closedBox
 ```
 
-Everything above the seam is this repository; everything below it is the closed
-service, which treats every submission as untrusted input (see
-[`contract/WIRE.md`](./contract/WIRE.md)).
+The bold arrow is the seam, and it is the entire interface: one authenticated POST
+carrying counts and timestamps. Everything inside the green box is this repository;
+everything in the dashed box is the closed service, which treats every submission as
+untrusted input (see [`contract/WIRE.md`](./contract/WIRE.md)).
 
 Eleven tool ids are accepted by the service (the wire schema's `tool` enum):
 `claude_code`, `codex`, `grok`, `cursor`, `vscode`, `pi`, `openclaw`, `opencode`,
