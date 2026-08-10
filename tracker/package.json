@@ -43,5 +43,23 @@
   "homepage": "https://deployforward.dev",
   "bugs": {
     "url": "https://github.com/Deploy-Forward/Deploy-Forward/issues"
-  }
+  },
+  "keywords": [
+    "claude-code",
+    "codex",
+    "gemini-cli",
+    "copilot",
+    "grok",
+    "token-usage",
+    "usage-tracker",
+    "ai-agents",
+    "coding-agents",
+    "llm",
+    "cli",
+    "token-tracking",
+    "spend-tracking",
+    "leaderboard",
+    "agentic-engineering",
+    "ccusage"
+  ]
 }
