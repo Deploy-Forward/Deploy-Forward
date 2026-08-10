@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+
+# Never commit usage data or transcripts, real or sampled - CI enforces this too
+# (scripts/check-no-transcripts.mjs).
+*.jsonl
+*.db
+*.sqlite
+*.sqlite3

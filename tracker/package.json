@@ -1,0 +1,39 @@
+{
+  "name": "deploy-forward",
+  "version": "0.23.0",
+  "description": "Deploy Forward tracker — ranks agentic engineers on what they ship. Measures your AI build time, tokens and outcomes locally (Claude Code; Codex next). Metadata only; never your code or prompts.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "deploy-forward": "dist/bin/df.js"
+  },
+  "files": [
+    "dist",
+    "HOOKS.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx bin/df.ts",
+    "test": "node --import tsx --test test/*.test.ts",
+    "eval:ccusage": "node eval/reconcile-ccusage.mjs",
+    "typecheck": "tsc --noEmit",
+    "prepare": "tsc",
+    "prepublishOnly": "tsc",
+    "eval:steward": "node eval/steward-audit.mjs",
+    "eval:pi": "node eval/pi-audit.mjs",
+    "eval:grok": "node eval/grok-audit.mjs",
+    "eval:openclaw": "node eval/openclaw-audit.mjs",
+    "eval:opencode": "node eval/opencode-audit.mjs",
+    "eval:hermes": "node eval/hermes-audit.mjs",
+    "eval:copilot": "node eval/copilot-audit.mjs",
+    "eval:gemini": "node eval/gemini-audit.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

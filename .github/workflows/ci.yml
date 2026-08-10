@@ -1,0 +1,47 @@
+# CI for the open capture layer.
+#
+# Secret-free by design: these jobs run with zero secret access and the read-only
+# default token, so a fork PR gets exactly the same treatment as a branch push and
+# there is nothing to exfiltrate. Actions are pinned to commit SHAs, not tags.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tracker:
+    name: tracker (typecheck + tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tracker
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm test
+
+  guards:
+    name: guards (transcript tripwire + core parity)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '22'
+      # No real usage data may ever enter this repository (see the script header).
+      - run: node scripts/check-no-transcripts.mjs
+      # usage-core is canonical; tracker/src/core must be its byte-identical copy.
+      - run: node usage-core/sync.mjs && git diff --exit-code

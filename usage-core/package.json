@@ -1,0 +1,9 @@
+{
+  "name": "@deploy-forward/usage-core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Canonical model pricing, tier bands and context windows for Deploy Forward. Public facts and estimation only - no scoring math. Synced into every consumer by sync.mjs; published at P3.",
+  "license": "MIT",
+  "type": "module",
+  "files": ["src", "LICENSE", "README.md"]
+}

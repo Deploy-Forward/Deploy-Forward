@@ -1,0 +1,425 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Deploy-Forward/tracker/contract/wire.schema.json",
+  "title": "Deploy Forward ingest payload",
+  "description": "The capture wire contract: the JSON body a tracker POSTs to {apiBase}/ingest with `Authorization: Bearer <deviceToken>`. Metadata only, by construction: no prompt text, no code, no file names, no working directories, no credentials, no user-typed rates ever appear in this shape. The server treats every field as untrusted input; trust labels are server-derived and never accepted from the wire. Sessions are chunked (100 per request by the reference tracker; the server rejects >500). Optional fields are DROPPED when absent, never null-filled - payload bytes are the upload digest, so field presence is contractual.",
+  "type": "object",
+  "required": [
+    "trackerVersion",
+    "sessions"
+  ],
+  "properties": {
+    "trackerVersion": {
+      "type": "string",
+      "description": "The submitting client's version, for adapter-drift forensics. Coerced to string server-side; never trusted for anything else."
+    },
+    "sessions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/session"
+      },
+      "description": "One entry per captured agent session. The server responds per-session with accepted / unchanged / flagged / rejected."
+    },
+    "unknownModels": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/unknownModelShare"
+      },
+      "description": "Consent-gated (off by default): occurrence tallies of model ids the bundled pricing table cannot price - never a rate, never a spend. Sent on the first chunk only."
+    }
+  },
+  "$defs": {
+    "tokenCounts": {
+      "type": "object",
+      "required": [
+        "input",
+        "output",
+        "cacheRead",
+        "cacheCreation"
+      ],
+      "properties": {
+        "input": {
+          "type": "number",
+          "minimum": 0
+        },
+        "output": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cacheRead": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cacheCreation": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "description": "Raw token counts as the harness recorded them. Real counters only: an adapter never estimates, smears, or fabricates a count."
+    },
+    "modelTokens": {
+      "type": "object",
+      "required": [
+        "id",
+        "input",
+        "output",
+        "cacheRead",
+        "cacheCreation"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The RAW model id from the transcript, client-side sanitized only (trimmed, length-capped). Canonicalization is a server concern."
+        },
+        "input": {
+          "type": "number",
+          "minimum": 0
+        },
+        "output": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cacheRead": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cacheCreation": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "skillCount": {
+      "type": "object",
+      "required": [
+        "id",
+        "count"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9:_./-]{1,64}$",
+          "description": "Normalized skill/agent NAME only - never arguments, message content, or the skill body."
+        },
+        "count": {
+          "type": "number",
+          "minimum": 1
+        }
+      }
+    },
+    "daySlice": {
+      "type": "object",
+      "required": [
+        "day",
+        "activeMs",
+        "idleMs",
+        "tokens"
+      ],
+      "properties": {
+        "day": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "UTC day key."
+        },
+        "activeMs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "idleMs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "tokens": {
+          "$ref": "#/$defs/tokenCounts"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/modelTokens"
+          }
+        }
+      },
+      "description": "One UTC day's share of a multi-day session - real observed atoms clipped at midnights, never a smear. Present only when a session touches more than one UTC day. Slices must sum exactly to the session totals; the server drops the whole array if they don't."
+    },
+    "mue": {
+      "type": "object",
+      "required": [
+        "alpha",
+        "cActual",
+        "cIdeal",
+        "ratio",
+        "costPerOutput",
+        "compactions",
+        "points"
+      ],
+      "properties": {
+        "alpha": {
+          "type": "number"
+        },
+        "cActual": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cIdeal": {
+          "type": "number",
+          "minimum": 0
+        },
+        "ratio": {
+          "type": "number"
+        },
+        "costPerOutput": {
+          "type": "number",
+          "minimum": 0
+        },
+        "compactions": {
+          "type": "number",
+          "minimum": 0
+        },
+        "points": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "description": "Model-Use Efficiency: the context-scaling summary for one session. STATUS ONLY - never ranked, and omitted (field absent) when the session is too short to estimate honestly."
+    },
+    "outcome": {
+      "type": "object",
+      "required": [
+        "type",
+        "observedAt"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "merged_pr",
+            "opened_pr",
+            "commit"
+          ]
+        },
+        "nodeId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "repoHash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prNumber": {
+          "type": "number",
+          "minimum": 1
+        },
+        "sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,40}$"
+        },
+        "addDel": {
+          "type": "number",
+          "minimum": 0
+        },
+        "observedAt": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "description": "A candidate shipped outcome observed in-session: type, hashes and identifiers only - never a diff, code, or prompt text. Self-attested on the wire; verification (and any weight) is derived server-side against GitHub."
+    },
+    "attribution": {
+      "type": "object",
+      "required": [
+        "canonicalRepoId",
+        "grantIds",
+        "localRepoId"
+      ],
+      "properties": {
+        "canonicalRepoId": {
+          "type": "string"
+        },
+        "grantIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "localRepoId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "description": "Explicit user-level telemetry grants for a locally-resolved repo. The raw working directory is never uploaded; the server re-validates every grant against the authenticated uid."
+    },
+    "unknownModelShare": {
+      "type": "object",
+      "required": [
+        "id",
+        "tool",
+        "count"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[\\w.@/:-]{1,128}$"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "count": {
+          "type": "number",
+          "minimum": 1
+        }
+      }
+    },
+    "session": {
+      "type": "object",
+      "required": [
+        "tool",
+        "toolSessionId",
+        "model",
+        "tokens",
+        "models",
+        "entryPoint",
+        "thinkingTokens",
+        "wallMs",
+        "activeMs",
+        "idleMs",
+        "startedAt",
+        "endedAt",
+        "repoHash",
+        "turns",
+        "longestLoopMs",
+        "messageCount"
+      ],
+      "properties": {
+        "tool": {
+          "enum": [
+            "claude_code",
+            "codex",
+            "grok",
+            "cursor",
+            "vscode",
+            "pi",
+            "openclaw",
+            "opencode",
+            "hermes",
+            "copilot",
+            "gemini"
+          ],
+          "description": "The harness that produced the session. The set the server accepts; the reference tracker currently emits nine of these (not cursor/vscode)."
+        },
+        "toolSessionId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,128}$",
+          "description": "The harness's own session id. The charset is a hard server gate (an id outside it is rejected, not flagged)."
+        },
+        "model": {
+          "type": "string",
+          "description": "The session's dominant raw model id."
+        },
+        "tokens": {
+          "$ref": "#/$defs/tokenCounts"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/modelTokens"
+          },
+          "description": "Per-model buckets; sums to `tokens` minus filtered pseudo-models."
+        },
+        "entryPoint": {
+          "type": "string",
+          "pattern": "^[a-z0-9._:-]{1,64}$",
+          "description": "Best-effort entry surface (cli, vscode, desktop, subagent, unknown, ...). Status only."
+        },
+        "thinkingTokens": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Observable reasoning-token count where the harness records one. Status only - never priced, never summed into output."
+        },
+        "mue": {
+          "$ref": "#/$defs/mue"
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skillCount"
+          }
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skillCount"
+          }
+        },
+        "days": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/daySlice"
+          }
+        },
+        "wallMs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "activeMs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "idleMs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "startedAt": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Epoch milliseconds."
+        },
+        "endedAt": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Epoch milliseconds; must not precede startedAt (hard reject)."
+        },
+        "repoHash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "An HMAC of the repo identity computed with a device-local key that never leaves the machine - distinct repos are countable without any name or URL crossing the wire. Null when no repo resolved."
+        },
+        "orgRepo": {
+          "type": "string",
+          "pattern": "^[\\w.-]+/[\\w.-]+$",
+          "description": "Org-enrolled devices ONLY: the normalized lowercase owner/name slug. A non-enrolled device never puts a repo name on the wire - this is a client-side privacy gate, not a server courtesy."
+        },
+        "attribution": {
+          "$ref": "#/$defs/attribution"
+        },
+        "turns": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Human-to-agent prompt count."
+        },
+        "longestLoopMs": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Longest continuous span of agent work with no human input."
+        },
+        "messageCount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Assistant messages seen. 0 is a tombstone: the session vanished locally and the server should treat prior data as withdrawn."
+        },
+        "outcomes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcome"
+          }
+        }
+      }
+    }
+  }
+}
