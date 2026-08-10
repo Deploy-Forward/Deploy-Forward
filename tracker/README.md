@@ -113,8 +113,10 @@ npx --yes deploy-forward@latest uninstall    # remove the Claude Code presence h
 
 ## Roadmap
 
-- **A localhost web UI** for the local views — the same usage, spend, and limit
-  data in a browser dashboard. Coming soon.
+- **Beyond the terminal** — today the local views live in your CLI. We see them
+  living in your notch, in a system-tray service, or hosted locally in your
+  browser: the same usage, spend, and limit data, always on glanceable surfaces,
+  same privacy posture. Coming soon.
 - **Remaining-usage bars for every limit lane** — Claude's 5-hour and weekly lanes
   currently render as text (window opened / resets at); they should carry the same
   percent-used bar the Codex and Grok weekly lanes already have.
