@@ -124,10 +124,18 @@ cd tracker
 npm install
 npm run typecheck
 npm test            # node --test via tsx; hermetic (DF_* home overrides, temp dirs)
+npm run dev         # run the CLI straight from source (tsx bin/df.ts), no build step
+npx tsx --test test/usageView.test.ts   # one suite while iterating
 ```
 
 Point a local build at any server with `DF_API_BASE` (and `DF_APP_BASE` for printed
-links); no account is needed for `node dist/bin/df.js usage` after `npm run build`.
+links); no account is needed for `npm run dev usage` or, after `npm run build`,
+`node dist/bin/df.js usage`.
+
+To change a model rate, tier band, or context window: edit `usage-core/src/`, run
+`node usage-core/sync.mjs`, and commit what it touched — never edit a `src/core/`
+copy (the coreParity test and CI's sync-parity guard both fail on drift; the full
+procedure is in [`usage-core/README.md`](./usage-core/README.md)).
 The CI in this repo runs the same commands plus two guards: the transcript tripwire
 (`scripts/check-no-transcripts.mjs` — no real usage data can ever enter this tree)
 and usage-core sync parity.
