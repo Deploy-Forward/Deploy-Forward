@@ -69,6 +69,24 @@ test("foldModelRows tombstones (models: []) contribute nothing", () => {
   assert.equal(total.total, 2);
 });
 
+test("foldModelRows keeps Grok model ids verbatim with input/output/cache buckets", () => {
+  const { rows, total } = foldModelRows([
+    {
+      models: [
+        { id: "grok-4.6", input: 40273, output: 265, cacheRead: 128, cacheCreation: 0 },
+        { id: "grok-4.5", input: 500, output: 100, cacheRead: 1500, cacheCreation: 0 },
+      ],
+    },
+    { models: [{ id: "grok-4.6", input: 100, output: 20, cacheRead: 0, cacheCreation: 0 }] },
+  ]);
+  assert.deepEqual(rows, [
+    { model: "grok-4.6", input: 40373, output: 285, cacheRead: 128, cacheCreation: 0, total: 40786 },
+    { model: "grok-4.5", input: 500, output: 100, cacheRead: 1500, cacheCreation: 0, total: 2100 },
+  ]);
+  assert.equal(total.input, 40873);
+  assert.equal(total.output, 385);
+});
+
 // ---- formatCompact ----------------------------------------------------------------------------
 
 test("formatCompact renders human-compact magnitudes", () => {

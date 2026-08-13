@@ -110,6 +110,7 @@ export const PRICING: PricingTable = {
     // follows this table's stated convention (no separate cache-write billing ->
     // cacheCreation = input rate); web's original entries carried 0 there, inert in
     // practice because the grok adapter never emits cache-write tokens.
+    "grok-4.6": { input: 2.0, output: 6.0, cacheRead: 0.5, cacheCreation: 2.0, note: "docs.x.ai 2026-08-12; long-context (>=200K prompt) tier is 4/1/12 and NOT modeled" },
     "grok-4.5": { input: 2.0, output: 6.0, cacheRead: 0.5, cacheCreation: 2.0, note: "docs.x.ai 2026-07-10; long-context (>200K) tier is higher and NOT modeled" },
     "grok-4.3": { input: 1.25, output: 2.5, cacheRead: 0.2, cacheCreation: 1.25, note: "docs.x.ai 2026-07-10; long-context (>200K) tier is higher and NOT modeled" },
     "grok-build-0.1": { input: 1.0, output: 2.0, cacheRead: 0.2, cacheCreation: 1.0, note: "docs.x.ai 2026-07-10" },

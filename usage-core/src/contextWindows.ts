@@ -109,6 +109,10 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   // --- xAI Grok CLI families (priced since P1; a priced id must have a window --
   // tracker/test/contextWindows.test.ts enforces that invariant). ---
 
+  // Vendor-sourced: docs.x.ai models page lists grok-4.6 context 500k (2026-08-12
+  // fetch, same read that sourced its price row). Same one-window-tiered-pricing
+  // shape as grok-4.5: >=200K prompts bill higher, which this registry does not model.
+  "grok-4.6": 500_000,
   // Catalog-sourced: "xai/grok-4.5" max_input_tokens 500,000 (2026-08-07 fetch).
   // Consistent with the rate note's ">200K long-context tier": one 500K window with
   // tiered pricing above 200K, which this registry does not model.

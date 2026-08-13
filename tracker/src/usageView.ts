@@ -13,6 +13,7 @@ import { basename, dirname } from "node:path";
 import { findSources, findCodexTranscripts, summarizeClaudeCorpus, summarizeFile } from "./sync.js";
 import { extractClaudeAtoms, dedupeClaudeUsageEntries, type ClaudeUsageEntry } from "./jsonl.js";
 import { parseCodexRollout } from "./codex.js";
+import { collectGrokUsageEvents, isOfficialGrokCli, summarizeGrokCorpus } from "./grok.js";
 import { loadState, type TrackerState } from "./config.js";
 import { listUserRates } from "./userRates.js";
 import type { SessionSummary, TokenCounts, ModelTokens, UserRate } from "./types.js";
@@ -31,7 +32,7 @@ export interface UsageRow extends TokenCounts {
 }
 
 /**
- * Fold every session's per-model buckets (Claude + Codex alike) into one table, sorted by
+ * Fold every session's per-model buckets (Claude + Codex + Grok alike) into one table, sorted by
  * total desc, plus a derived TOTAL row. The total is SUMMED from the rows, never an
  * independently stored number — same discipline sync.ts uses for its per-thread totals.
  */
@@ -61,10 +62,14 @@ export function foldModelRows(summaries: Pick<SessionSummary, "models">[]): { ro
 }
 
 /**
- * Read the WHOLE local corpus (Claude + Codex) and fold it per model. Read-only: the
- * sync.ts summarizers are each handed a fresh deep-copied throwaway state, so this view
- * can never advance a cursor or a thread digest — that would desync the next real
+ * Read the WHOLE local corpus (Claude + Codex + Grok) and fold it per model. Read-only:
+ * the sync.ts summarizers are each handed a fresh deep-copied throwaway state, so this
+ * view can never advance a cursor or a thread digest — that would desync the next real
  * `sync`/hooks pass, which is the one thing this command must never do.
+ *
+ * Grok is fingerprint-gated the same way syncOnce is: no official xAI CLI tree, no
+ * rows. Model ids stay verbatim (`grok-4.6`, `grok-4.5`, …) with input/output/cache
+ * from each `shell.turn.inference_done` line.
  */
 export function readLocalModelRows(): { rows: UsageRow[]; total: UsageRow } {
   const state: TrackerState = loadState();
@@ -84,6 +89,9 @@ export function readLocalModelRows(): { rows: UsageRow[]; total: UsageRow } {
     if (s.tool !== "codex") continue;
     const summary = summarizeFile(s.path, structuredClone(state), "codex", []);
     if (summary) summaries.push(summary);
+  }
+  if (isOfficialGrokCli()) {
+    summaries.push(...summarizeGrokCorpus(structuredClone(state)));
   }
   return foldModelRows(summaries);
 }
@@ -144,6 +152,8 @@ export function foldProjectRows(groups: { project: string; summaries: Pick<Sessi
  *    fabricating a path that never existed).
  *  - Codex: label = the `cwd` recorded in the rollout's own session_meta line (plumbed through
  *    parseCodexRollout -> summarizeFile), or "(unknown)" when a rollout carries none.
+ *  - Grok: label = `summary.json` cwd (joined from the session dir), or "(unknown)" when
+ *    the session dir is gone. Same verbatim-path posture as Codex.
  *
  * Read-only, same discipline as readLocalModelRows(): every summarizer call gets a fresh
  * structuredClone(state) throwaway, so this view can never advance a cursor or thread digest.
@@ -178,6 +188,12 @@ export function readLocalProjectRows(): ProjectRow[] {
     if (s.tool !== "codex") continue;
     const summary = summarizeFile(s.path, structuredClone(state), "codex", []);
     if (summary) push(summary.cwd ?? "(unknown)", [summary]);
+  }
+
+  if (isOfficialGrokCli()) {
+    for (const summary of summarizeGrokCorpus(structuredClone(state))) {
+      push(summary.cwd ?? "(unknown)", [summary]);
+    }
   }
 
   const groups = [...byProject.entries()].map(([project, summaries]) => ({ project, summaries }));
@@ -269,13 +285,22 @@ function collectAllCodexUsageEvents(): { ts: number; model: string; tokens: Toke
   return events;
 }
 
+/** Grok per-inference events (ts + turn-window model + TokenCounts). Empty when the
+ * official-CLI fingerprint fails — same gate as readLocalModelRows. */
+function collectAllGrokUsageEvents(): { ts: number; model: string; tokens: TokenCounts }[] {
+  if (!isOfficialGrokCli()) return [];
+  return collectGrokUsageEvents();
+}
+
 /**
- * Read the last USAGE_DAY_WINDOW local calendar days across BOTH tools:
+ * Read the last USAGE_DAY_WINDOW local calendar days across Claude, Codex, and Grok:
  *  - Claude: every deduped usage entry (extractClaudeAtoms + dedupeClaudeUsageEntries, the
  *    SAME flat corpus-wide dedup collectRecentClaudeEntries runs) -- just with no mtime
  *    lookback filter, since --by-day wants the whole trailing window, not "recent activity".
  *  - Codex: per-turn token deltas with their own line timestamp (see collectAllCodexUsageEvents
  *    above) -- a real reconstruction already used for per-model attribution, not a guess.
+ *  - Grok: per-inference deltas from unified.jsonl (see collectGrokUsageEvents) — same
+ *    token mapping and model windows as the session fold, timestamped at inference time.
  */
 export function readLocalDayRows(now: number = Date.now()): DayRow[] {
   const claudeEntries = collectAllClaudeUsageEntries(now)
@@ -284,7 +309,10 @@ export function readLocalDayRows(now: number = Date.now()): DayRow[] {
       return Number.isFinite(ts) ? { ts, model: e.model ?? "unknown", tokens: e.tokens } : null;
     })
     .filter((x): x is { ts: number; model: string; tokens: TokenCounts } => x !== null);
-  return foldUsageDayRows([...claudeEntries, ...collectAllCodexUsageEvents()], now);
+  return foldUsageDayRows(
+    [...claudeEntries, ...collectAllCodexUsageEvents(), ...collectAllGrokUsageEvents()],
+    now,
+  );
 }
 
 // ---- Cost estimation (usage --cost) -------------------------------------------------------

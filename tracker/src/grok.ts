@@ -160,6 +160,60 @@ export function extractGrokInferences(content: string): GrokInference[] {
   return scanGrokInferences(content).inferences;
 }
 
+/**
+ * xAI convention -> TokenCounts. prompt includes the cached portion, so input is
+ * prompt - cached (clamped >= 0). cacheCreation stays 0: Grok logs no cache-write
+ * counter. Shared by the session fold and the per-inference usage-view events so
+ * the two cannot drift.
+ */
+export function inferenceTokens(inf: GrokInference): TokenCounts {
+  return {
+    input: Math.max(0, inf.prompt - inf.cached),
+    output: inf.completion,
+    cacheRead: inf.cached,
+    cacheCreation: 0,
+  };
+}
+
+/**
+ * Per-inference usage events for `usage --by-day`. Same token mapping and
+ * turn-window model attribution as scanGrokCorpus; kept ungrouped so the day
+ * fold can bucket by the inference's own timestamp, not the session start day.
+ */
+export function collectGrokUsageEvents(home: string = grokHome()): Array<{
+  ts: number;
+  model: string;
+  tokens: TokenCounts;
+}> {
+  let content: string;
+  try {
+    content = readFileSync(grokUnifiedLogPath(home), "utf8");
+  } catch {
+    return [];
+  }
+  const inferences = extractGrokInferences(content);
+  if (inferences.length === 0) return [];
+  const dirs = grokSessionDirs(home);
+  const metaBySid = new Map<string, GrokSessionMeta>();
+  const events: Array<{ ts: number; model: string; tokens: TokenCounts }> = [];
+  for (const inf of inferences) {
+    let meta = metaBySid.get(inf.sid);
+    if (!meta) {
+      const dir = dirs.get(inf.sid);
+      meta = dir
+        ? readGrokSessionMeta(dir)
+        : { cwd: null, currentModelId: null, numMessages: null, turnStarts: [], turnTs: [] };
+      metaBySid.set(inf.sid, meta);
+    }
+    events.push({
+      ts: inf.ts,
+      model: modelForInference(meta.turnStarts, inf.ts, meta.currentModelId),
+      tokens: inferenceTokens(inf),
+    });
+  }
+  return events;
+}
+
 /** Per-session metadata joined from summary.json + events.jsonl. */
 export interface GrokSessionMeta {
   cwd: string | null;
@@ -312,12 +366,7 @@ export function scanGrokCorpus(state: TrackerState, home: string = grokHome()): 
     const mueSeries: OccupancySeriesEntry[] = [];
     for (const inf of infs) {
       const model = modelForInference(meta.turnStarts, inf.ts, meta.currentModelId);
-      const tk = {
-        input: Math.max(0, inf.prompt - inf.cached),
-        output: inf.completion,
-        cacheRead: inf.cached,
-        cacheCreation: 0,
-      };
+      const tk = inferenceTokens(inf);
       creditModel(byModel, model, tk);
       mueSeries.push({ tokens: tk, ts: inf.ts, model });
       thinkingTokens += inf.reasoning;

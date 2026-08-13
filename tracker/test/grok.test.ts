@@ -15,6 +15,8 @@ import {
   isOfficialGrokCli,
   summarizeGrokCorpus,
   grokSessionDirs,
+  inferenceTokens,
+  collectGrokUsageEvents,
 } from "../src/grok.ts";
 import type { TrackerState } from "../src/config.ts";
 
@@ -188,6 +190,37 @@ test("summarizeGrokCorpus: joins tokens, model windows, cwd; skips pre-logging l
     assert.deepEqual(scan.sessions, out);
     assert.equal(scan.totalLines, 4);
     assert.equal(scan.unknownLines, 1);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("inferenceTokens maps prompt-minus-cached; never invents cacheCreation", () => {
+  assert.deepEqual(
+    inferenceTokens({ ts: 1, sid: "s", prompt: 1000, cached: 400, completion: 50, reasoning: 10 }),
+    { input: 600, output: 50, cacheRead: 400, cacheCreation: 0 },
+  );
+  assert.deepEqual(
+    inferenceTokens({ ts: 1, sid: "s", prompt: 100, cached: 150, completion: 0, reasoning: 0 }),
+    { input: 0, output: 0, cacheRead: 150, cacheCreation: 0 },
+  );
+});
+
+test("collectGrokUsageEvents: one event per inference, turn-window model, session-start day not used", () => {
+  const home = buildFixtureHome();
+  try {
+    const events = collectGrokUsageEvents(home);
+    assert.equal(events.length, 3);
+    const byTs = Object.fromEntries(events.map((e) => [e.ts, e]));
+    const t1 = Date.parse("2026-07-01T10:00:30.000Z");
+    const t2 = Date.parse("2026-07-01T10:05:30.000Z");
+    const t3 = Date.parse("2026-07-02T08:00:00.000Z");
+    assert.equal(byTs[t1].model, "grok-4.3");
+    assert.deepEqual(byTs[t1].tokens, { input: 600, output: 50, cacheRead: 400, cacheCreation: 0 });
+    assert.equal(byTs[t2].model, "grok-4.5");
+    assert.deepEqual(byTs[t2].tokens, { input: 500, output: 100, cacheRead: 1500, cacheCreation: 0 });
+    assert.equal(byTs[t3].model, "unknown");
+    assert.deepEqual(byTs[t3].tokens, { input: 500, output: 25, cacheRead: 0, cacheCreation: 0 });
   } finally {
     rmSync(home, { recursive: true, force: true });
   }
