@@ -27,6 +27,25 @@
  */
 
 import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
+// ---- Consent + credentials location (moved from superStart so every surface — the
+// watch, the CLI usage footer, the localhost dashboard — resolves them identically
+// without importing the whole showcase module) ---------------------------------------
+
+/** The extracted pure decision table for the Tier B lanes fetch: an explicit per-run
+ * flag (true OR false) always wins; omitted falls back to the persisted opt-in; both
+ * absent is false — today's default unchanged. `??` only falls through on undefined,
+ * so an explicit per-run decline is never masked by a persisted true. */
+export function resolveLimitsConsent(flag: boolean | undefined, statePersisted: boolean | undefined): boolean {
+  return flag ?? statePersisted ?? false;
+}
+
+/** The env-overridable Claude Code credentials location — one source for every caller. */
+export function claudeCredentialsPath(): string {
+  return process.env.DF_CLAUDE_CREDENTIALS ?? join(homedir(), ".claude", ".credentials.json");
+}
 
 // ---- Types -----------------------------------------------------------------------------
 

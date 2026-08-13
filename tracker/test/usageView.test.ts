@@ -27,7 +27,11 @@ import {
   projectRowsToJson,
   dayRowsToJson,
   PRICES,
+  readLocalModelRows,
 } from "../src/usageView.ts";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { dedupeClaudeUsageEntries, type ClaudeUsageEntry } from "../src/jsonl.ts";
 
 /**
@@ -85,6 +89,63 @@ test("foldModelRows keeps Grok model ids verbatim with input/output/cache bucket
   ]);
   assert.equal(total.input, 40873);
   assert.equal(total.output, 385);
+});
+
+// ---- readLocalModelRows folds EVERY harness (the localhost/CLI accuracy parity) --------------
+
+test("readLocalModelRows folds adapter harnesses too — a pi corpus's models appear in the CLI table", () => {
+  // Marco 2026-08-13: the localhost dashboard (readShowcaseData) folded all eight
+  // harnesses while `usage` folded Claude+Codex+Grok only, so the two surfaces
+  // disagreed. This pins the fix: one all-harness composition for both.
+  // Hermetic: EVERY discoverable home is pinned (the syncOnce lesson); pi gets a
+  // real fixture corpus, everything else an empty temp dir.
+  const empty = mkdtempSync(join(tmpdir(), "df-uv-empty-"));
+  const piHome = mkdtempSync(join(tmpdir(), "df-uv-pi-"));
+  const sessions = join(piHome, "agent", "sessions", "--home-m-proj--");
+  mkdirSync(sessions, { recursive: true });
+  writeFileSync(
+    join(sessions, "20260701_aaa.jsonl"),
+    [
+      JSON.stringify({ type: "session", version: 3, id: "sess-aaa", timestamp: "2026-07-01T10:00:00.000Z", cwd: "/home/m/proj" }),
+      JSON.stringify({ type: "model_change", id: "mc1", parentId: null, timestamp: "2026-07-01T10:00:01.000Z", provider: "anthropic", modelId: "model-a" }),
+      JSON.stringify({ type: "message", id: "u1", parentId: null, timestamp: "2026-07-01T10:00:02.000Z", message: { role: "user", content: [{ type: "text", text: "hi" }] } }),
+      JSON.stringify({
+        type: "message", id: "a1", parentId: null, timestamp: "2026-07-01T10:00:10.000Z",
+        message: { role: "assistant", provider: "anthropic", model: "model-a", usage: { input: 110, output: 55, cacheRead: 20, cacheWrite: 5, totalTokens: 165 } },
+      }),
+    ].join("\n"),
+  );
+  const PINS: Record<string, string> = {
+    DF_CLAUDE_PROJECTS: join(empty, "no-claude"),
+    DF_CODEX_SESSIONS: join(empty, "no-codex"),
+    DF_GROK_HOME: join(empty, "no-grok"),
+    DF_OPENCLAW_HOME: join(empty, "no-openclaw"),
+    DF_OPENCODE_HOME: join(empty, "no-opencode"),
+    DF_HERMES_HOME: join(empty, "no-hermes"),
+    DF_COPILOT_HOME: join(empty, "no-copilot"),
+    DF_PI_HOME: piHome,
+  };
+  const saved: Record<string, string | undefined> = {};
+  for (const [k, v] of Object.entries(PINS)) {
+    saved[k] = process.env[k];
+    process.env[k] = v;
+  }
+  try {
+    const { rows } = readLocalModelRows();
+    const pi = rows.find((r) => r.model === "model-a");
+    assert.ok(pi, "the pi corpus's model must appear in the CLI's own fold");
+    assert.equal(pi!.input, 110);
+    assert.equal(pi!.output, 55);
+    assert.equal(pi!.cacheRead, 20);
+    assert.equal(pi!.cacheCreation, 5);
+  } finally {
+    for (const [k, v] of Object.entries(saved)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    rmSync(empty, { recursive: true, force: true });
+    rmSync(piHome, { recursive: true, force: true });
+  }
 });
 
 // ---- formatCompact ----------------------------------------------------------------------------

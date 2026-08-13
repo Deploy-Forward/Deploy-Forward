@@ -16,23 +16,23 @@
  * volume rather than plot a misleading all-$0 spend. Zero-usage days are real
  * zero-height columns, never gaps and never invented values.
  */
-import { findSources, summarizeClaudeCorpus, summarizeFile, TRACKER_VERSION } from "./sync.js";
-import { foldModelRows, readLocalDayRows, formatCompact, formatCostUsd, estimateGroupCostUsd, hasUnpricedUsage, readLatestCodexRateLimits, collectRecentClaudeEntries, computeCurrent5hBlock, formatClaude5hLine, type UsageRow, type CodexRateLimits, type Claude5hBlock } from "./usageView.js";
-import { isOfficialGrokCli, scanGrokCorpus, grokUnifiedLogPath, readLatestGrokCredits, type GrokCredits } from "./grok.js";
-import { isOfficialPiCli, scanPiCorpus, piSessionFiles } from "./pi.js";
-import { isOfficialOpenClawCli, scanOpenClawCorpus, openclawSessionFiles } from "./openclaw.js";
-import { isOfficialOpencodeHome, scanOpencodeCorpus, opencodeHome, opencodeDbPaths } from "./opencode.js";
-import { isOfficialHermesCli, scanHermesCorpus, hermesHome, hermesDbPath } from "./hermes.js";
-import { isOfficialCopilotCli, scanCopilotCorpus, copilotHome, copilotDbPath } from "./copilot.js";
+import { findSources, TRACKER_VERSION } from "./sync.js";
+import { foldModelRows, readAllHarnessSummaries, readLocalDayRows, formatCompact, formatCostUsd, estimateGroupCostUsd, hasUnpricedUsage, readLatestCodexRateLimits, collectRecentClaudeEntries, computeCurrent5hBlock, formatClaude5hLine, type UsageRow, type CodexRateLimits, type Claude5hBlock } from "./usageView.js";
+import { isOfficialGrokCli, grokUnifiedLogPath, readLatestGrokCredits, type GrokCredits } from "./grok.js";
+import { isOfficialPiCli, piSessionFiles } from "./pi.js";
+import { isOfficialOpenClawCli, openclawSessionFiles } from "./openclaw.js";
+import { isOfficialOpencodeHome, opencodeHome, opencodeDbPaths } from "./opencode.js";
+import { isOfficialHermesCli, hermesHome, hermesDbPath } from "./hermes.js";
+import { isOfficialCopilotCli, copilotHome, copilotDbPath } from "./copilot.js";
 import { loadState, saveState, markOnboarded, APP_BASE, type TrackerState } from "./config.js";
 import type { SessionSummary, SessionContext } from "./types.js";
 import { windowForSession } from "./contextWindows.js";
-import { fetchClaudeLimits } from "./limitsFetch.js";
+import { fetchClaudeLimits, resolveLimitsConsent, claudeCredentialsPath } from "./limitsFetch.js";
+export { resolveLimitsConsent, claudeCredentialsPath };
 import { staleVersionBanner } from "./update.js";
-import { homedir } from "node:os";
+// homedir/join left with claudeCredentialsPath when it moved to limitsFetch.ts.
 // basename is deliberately NOT imported here: the one place this file needed it
 // (repoLabel) must be separator-agnostic across platforms — see repoBasename below.
-import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { Worker } from "node:worker_threads";
 import { existsSync, statSync } from "node:fs";
@@ -271,17 +271,8 @@ export interface ShowcaseData {
   grokCredits: GrokCredits | null;
 }
 
-/** The six adapter-provider scans, each behind its own official-tool fingerprint —
- * the SAME gates and entry points syncOnce uses, minus every persistence step. A
- * locked db or vanished home yields [] for that harness, never a crash. */
-const ADAPTER_SCANS: { name: string; scan: (state: TrackerState) => SessionSummary[] }[] = [
-  { name: "Grok", scan: (st) => (isOfficialGrokCli() ? scanGrokCorpus(st).sessions : []) },
-  { name: "pi", scan: (st) => (isOfficialPiCli() ? scanPiCorpus(st).sessions : []) },
-  { name: "OpenClaw", scan: (st) => (isOfficialOpenClawCli() ? scanOpenClawCorpus(st).sessions : []) },
-  { name: "opencode", scan: (st) => (isOfficialOpencodeHome() ? scanOpencodeCorpus(st, opencodeHome()).sessions : []) },
-  { name: "Hermes", scan: (st) => (isOfficialHermesCli() ? scanHermesCorpus(st, hermesHome()).sessions : []) },
-  { name: "Copilot", scan: (st) => (isOfficialCopilotCli() ? scanCopilotCorpus(st, copilotHome()).sessions : []) },
-];
+// The adapter-scan list moved to usageView.ts (readAllHarnessSummaries) so `usage`
+// and this showcase fold the SAME corpus — one composition, every surface.
 
 /**
  * One read-only pass over EVERY harness's local corpus — Claude/Codex through the
@@ -293,41 +284,21 @@ const ADAPTER_SCANS: { name: string; scan: (state: TrackerState) => SessionSumma
  */
 export function readShowcaseData(now: number = Date.now()): ShowcaseData {
   const state = loadState();
-  const sources = findSources();
 
-  const claudeSources = sources.filter((s) => s.tool === "claude_code");
-  const claudeSummaries =
-    claudeSources.length > 0
-      ? summarizeClaudeCorpus(
-          claudeSources.map((s) => ({ path: s.path, subagents: s.subagents })),
-          structuredClone(state),
-        )
-      : [];
-  const codexSummaries = sources
-    .filter((s) => s.tool === "codex")
-    .map((s) => summarizeFile(s.path, structuredClone(state), "codex", []))
-    .filter((s): s is NonNullable<typeof s> => s !== null && s !== undefined);
+  // ONE corpus for every surface: the same all-harness composition `usage` folds
+  // (usageView.readAllHarnessSummaries), so the showcase, the CLI table, and the
+  // localhost dashboard can never disagree about what this machine ran.
+  const harnessSummaries = readAllHarnessSummaries(structuredClone(state));
 
   // Session = a summary carrying real usage; a fully-deduped fork tombstone (models: [])
   // is a bookkeeping record, not a session anyone ran.
   const liveOnes = (list: SessionSummary[]): number => list.filter((s) => s.models.length > 0).length;
 
-  const adapterResults = ADAPTER_SCANS.map(({ name, scan }) => {
-    try {
-      return { name, summaries: scan(structuredClone(state)) };
-    } catch {
-      return { name, summaries: [] as SessionSummary[] }; // a locked db must never kill the showcase
-    }
-  });
-
-  const allSummaries = [...claudeSummaries, ...codexSummaries, ...adapterResults.flatMap((r) => r.summaries)];
+  const allSummaries = harnessSummaries.flatMap((h) => h.summaries);
   const { rows: modelRows, total } = foldModelRows(allSummaries);
 
-  const harnesses: ShowcaseHarness[] = [
-    { name: "Claude Code", sessions: liveOnes(claudeSummaries) },
-    { name: "Codex", sessions: liveOnes(codexSummaries) },
-    ...adapterResults.map((r) => ({ name: r.name, sessions: liveOnes(r.summaries) })),
-  ]
+  const harnesses: ShowcaseHarness[] = harnessSummaries
+    .map((h) => ({ name: h.name, sessions: liveOnes(h.summaries) }))
     .filter((h) => h.sessions > 0)
     .sort((a, b) => b.sessions - a.sessions);
 
@@ -1870,13 +1841,8 @@ export function settingsStep(
 
 // ---- persisted limits consent (D18) + the honest non-TTY note (D19) ------------------------------
 
-/** The extracted pure decision table for the Tier B lanes fetch: an explicit per-run
- * flag (true OR false) always wins; omitted falls back to the persisted opt-in; both
- * absent is false - today's default unchanged. `??` only falls through on undefined,
- * so an explicit per-run decline is never masked by a persisted true. */
-export function resolveLimitsConsent(flag: boolean | undefined, statePersisted: boolean | undefined): boolean {
-  return flag ?? statePersisted ?? false;
-}
+// resolveLimitsConsent moved to limitsFetch.ts (one home for every surface);
+// re-exported below so existing importers keep working unchanged.
 
 /** D19: a bare/`start` run without a TTY keeps the legacy monitor but must SAY so -
  * one line naming why and how to get the full experience. bin/df.ts prints this
@@ -2312,9 +2278,7 @@ export async function orgJoinOnboarding(ask: {
  * Marco 2026-07-17). Interactive TTY paths only: a title write is still an escape
  * sequence, and piped output must never see one. */
 /** The Claude Code CLI's own credential file — read-only, never written. */
-function claudeCredentialsPath(): string {
-  return process.env.DF_CLAUDE_CREDENTIALS ?? join(homedir(), ".claude", ".credentials.json");
-}
+// claudeCredentialsPath moved to limitsFetch.ts alongside the fetch it feeds.
 
 function setTitle(io: ShowcaseIO, title: string): void {
   io.write(`\x1b]0;${title}\x07`);

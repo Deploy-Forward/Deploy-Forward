@@ -75,6 +75,36 @@ function friendlyLoginError(message: string): string {
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
+/** Start a /api/pair session: mint a typed code + pollSecret, labelled so the account's
+ * device list reads like an inventory. Shared by pair() (this machine) and setupToken()
+ * (a token for ANOTHER box). */
+async function pairStart(apiBase: string, label: string): Promise<StartResp> {
+  return postJson<StartResp>(`${apiBase}/pair`, { label });
+}
+
+/** Poll /api/pair/claim until the human approves in the browser or the code expires.
+ * Returns the approved claim (carrying the freshly-minted device token), or null on
+ * expiry. `pollMs` is the cadence between polls — production is 2500ms; a test overrides
+ * it so it need not wait real seconds. Transient network blips keep polling until the
+ * code's own deadline. Shared by pair() and setupToken() — the ONE mint flow, never two. */
+async function pairPoll(apiBase: string, start: StartResp, pollMs: number): Promise<ClaimResp | null> {
+  const deadline = Date.now() + start.expiresInMs;
+  while (Date.now() < deadline) {
+    await sleep(pollMs);
+    let claim: ClaimResp;
+    try {
+      claim = await postJson<ClaimResp>(`${apiBase}/pair/claim`, {
+        code: start.code,
+        pollSecret: start.pollSecret,
+      });
+    } catch {
+      continue; // transient network blip — keep polling until the code expires
+    }
+    if (claim.status === "approved" && claim.deviceToken) return claim;
+  }
+  return null;
+}
+
 /**
  * Typed-code pairing — the universal existing-account bridge (second machine, web-first
  * sign-up, Teams org enrollment). The browser session proves the uid, so this works for
@@ -88,7 +118,7 @@ const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
  */
 export async function pair(opts: { ceremony?: boolean } = {}): Promise<boolean> {
   const state = loadState();
-  const start = await postJson<StartResp>(`${state.apiBase}/pair`, { label: hostname() });
+  const start = await pairStart(state.apiBase, hostname());
 
   if (!opts.ceremony) {
     ui.banner();
@@ -102,47 +132,81 @@ export async function pair(opts: { ceremony?: boolean } = {}): Promise<boolean> 
   openBrowser(`${APP_BASE}/pair`);
   const wait = ui.spinner("Waiting for approval in the browser…");
 
-  const deadline = Date.now() + start.expiresInMs;
-  while (Date.now() < deadline) {
-    await sleep(2500);
-    let claim: ClaimResp;
-    try {
-      claim = await postJson<ClaimResp>(`${state.apiBase}/pair/claim`, {
-        code: start.code,
-        pollSecret: start.pollSecret,
-      });
-    } catch {
-      continue; // transient network blip — keep polling until the code expires
+  const claim = await pairPoll(state.apiBase, start, 2500);
+  if (claim && claim.deviceToken) {
+    // Pairing to a DIFFERENT account must reset the sync ledgers: cursors/threadDigests
+    // describe what reached the OLD uid's docs, and the server keys docs by uid — kept
+    // stale, the digest gate would skip uploads and the new account would stay empty
+    // while the CLI claims everything re-syncs. A fresh ledger forces the full re-upload.
+    const accountChanged = state.uid !== null && state.uid !== (claim.uid ?? null);
+    const next: TrackerState = {
+      ...state,
+      deviceToken: claim.deviceToken,
+      uid: claim.uid ?? null,
+      handle: claim.handle ?? null,
+      ...(accountChanged ? { cursors: {}, threadDigests: {} } : {}),
+    };
+    saveState(next);
+    wait.done(`Paired as ${ui.c.bold("@" + (claim.handle ?? claim.uid))} ${ui.c.dim(`(this device: ${hostname()})`)}`);
+    if (!opts.ceremony) {
+      // Hooks ARE the daemon: Claude Code now triggers debounced syncs on session
+      // lifecycle events — no resident process needed after this command exits.
+      // (In the ceremony, the walkthrough's own hooks step installs and explains them.)
+      installHooks();
+      ui.hint("Syncing automatically from now on — no terminal needed.");
+      ui.blank();
     }
-    if (claim.status === "approved" && claim.deviceToken) {
-      // Pairing to a DIFFERENT account must reset the sync ledgers: cursors/threadDigests
-      // describe what reached the OLD uid's docs, and the server keys docs by uid — kept
-      // stale, the digest gate would skip uploads and the new account would stay empty
-      // while the CLI claims everything re-syncs. A fresh ledger forces the full re-upload.
-      const accountChanged = state.uid !== null && state.uid !== (claim.uid ?? null);
-      const next: TrackerState = {
-        ...state,
-        deviceToken: claim.deviceToken,
-        uid: claim.uid ?? null,
-        handle: claim.handle ?? null,
-        ...(accountChanged ? { cursors: {}, threadDigests: {} } : {}),
-      };
-      saveState(next);
-      wait.done(`Paired as ${ui.c.bold("@" + (claim.handle ?? claim.uid))} ${ui.c.dim(`(this device: ${hostname()})`)}`);
-      if (!opts.ceremony) {
-        // Hooks ARE the daemon: Claude Code now triggers debounced syncs on session
-        // lifecycle events — no resident process needed after this command exits.
-        // (In the ceremony, the walkthrough's own hooks step installs and explains them.)
-        installHooks();
-        ui.hint("Syncing automatically from now on — no terminal needed.");
-        ui.blank();
-      }
-      return true;
-    }
+    return true;
   }
   wait.fail(`Pairing code expired. Run \`npx --yes deploy-forward@latest${opts.ceremony ? "" : " pair"}\` again.`);
   process.exitCode = 1;
   return false;
+}
+
+/**
+ * `deploy-forward setup-token` — mint a fresh, revocable device token FOR ANOTHER box via
+ * the SAME /api/pair browser flow pair() uses, but PRINT-DON'T-SAVE. A laptop-with-browser
+ * mints a token for a headless target (EC2 over SSH, CI, a container, an agent host), which
+ * then authenticates purely by `export DF_DEVICE_TOKEN=…` (see config.ts). This machine is
+ * NOT the target, so nothing is persisted here: no saveState, no ledger reset, no hooks —
+ * the minted token is printed with copy-paste + revoke guidance and returned, and that is all.
+ *
+ *   opts.label   labels the minted token in the account's device list so it is identifiable
+ *                for later revocation (default: this machine's hostname).
+ *   opts.pollMs  the claim poll cadence (default 2500ms; tests override it).
+ *
+ * Returns the minted token on approval, or null on a non-approved / expired poll. A human
+ * still approves in the browser — a fully-browserless mint is impossible BY DESIGN (that
+ * approval is the whole security model), so on a non-TTY run (e.g. Cloud Shell) it prints
+ * the URL + code and polls rather than trying to open a browser.
+ */
+export async function setupToken(opts: { label?: string; pollMs?: number } = {}): Promise<string | null> {
+  const state = loadState();
+  const label = opts.label ?? hostname();
+  const start = await pairStart(state.apiBase, label);
+
+  console.log(`  Minting a device token for another box (label: ${ui.c.bold(label)}).`);
+  console.log(`  Sign in at ${ui.c.accent(`${APP_BASE}/pair`)} and type this code — never a code someone sent you:`);
+  ui.bigCode(start.code);
+  // A human approves in a browser; only try to open one on an interactive terminal.
+  if (process.stdout.isTTY) openBrowser(`${APP_BASE}/pair`);
+
+  const claim = await pairPoll(state.apiBase, start, opts.pollMs ?? 2500);
+  if (!claim || !claim.deviceToken) {
+    console.log(`  Pairing code expired before it was approved — run \`npx deploy-forward setup-token\` again.`);
+    return null;
+  }
+
+  const token = claim.deviceToken;
+  // PRINT-DON'T-SAVE: the token is for the target box, not this machine. Never persisted here.
+  ui.blank();
+  console.log(`  Device token minted. Set it on the target box:`);
+  console.log(``);
+  console.log(`      export DF_DEVICE_TOKEN=${token}`);
+  console.log(``);
+  console.log(`  ${ui.c.dim("Then that box syncs headlessly (no browser, no TTY): npx deploy-forward sync")}`);
+  console.log(`  ${ui.c.dim(`Revoke it anytime from your device list at ${APP_BASE}, or run \`npx deploy-forward logout\` on that box.`)}`);
+  return token;
 }
 
 /**

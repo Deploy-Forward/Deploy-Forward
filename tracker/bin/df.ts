@@ -6,10 +6,13 @@
  *                                   machine to your existing one; every run after: account
  *                                   dashboard + live monitor (interactive terminals only; Ctrl-C any time)
  *   deploy-forward pair             pair a SECOND machine to your account (typed code; also org enrollment)
+ *   deploy-forward setup-token      mint a device token FOR ANOTHER (headless) box; set it there as $DF_DEVICE_TOKEN
  *   deploy-forward start            the same live monitor, skipping the ceremony (hooks already sync)
  *   deploy-forward super-start      full-screen animated showcase of this machine's real usage (--light for a light terminal; --static for plain text; --redact to hide thread/repo names)
  *   deploy-forward sync             sync once and exit
  *   deploy-forward status           auth, hooks, last sync - the health check
+ *   deploy-forward environments     headless/server recipes: run on EC2/SSH, CI, a
+ *                                   container or Cloud Shell (alias: recipes)
  *   deploy-forward usage             local per-model usage + session windows (no account needed)
  *   deploy-forward usage --by-project   per-project token attribution
  *   deploy-forward usage --by-day       per-day totals, last 30 days
@@ -33,7 +36,7 @@
  * transcripts. It never reads or transmits your code or prompts.
  */
 import { hostname, homedir } from "node:os";
-import { pair, githubOnboard, logout } from "../src/auth.js";
+import { pair, githubOnboard, logout, setupToken } from "../src/auth.js";
 import { syncOnce, TRACKER_VERSION, formatAccountDeletedMessage } from "../src/sync.js";
 import { restore } from "../src/restore.js";
 import { backfillRepository, linkRepository, listLinks, listOrganizations, showAttributionStatus, unlinkRepository } from "../src/repoAttribution.js";
@@ -50,6 +53,7 @@ import {
   type OrgJoinError,
 } from "../src/orgContext.js";
 import { formatProviderCounts, monitorStats } from "../src/monitorStats.js";
+import { startDashboardServer, DASHBOARD_DEFAULT_PORT } from "../src/localDashboard.js";
 import {
   buildLiveSpendPush,
   liveSpendEnabled,
@@ -63,6 +67,7 @@ import { setUserRate, listUserRates, unsetUserRate, type UserRate } from "../src
 import { runSuperStart, billingModeOnboarding, orgJoinOnboarding, NON_TTY_NOTE, openInBrowser } from "../src/superStart.js";
 import { update, checkForNewerVersion, staleVersionBanner } from "../src/update.js";
 import { getPublicity, setPublicity, buildPublicityNotice, type PublicityState } from "../src/publicity.js";
+import { detectEnvironment, renderEnvironments, LAUNCH_ANYWHERE_HINT } from "../src/environments.js";
 import * as ui from "../src/ui.js";
 
 /**
@@ -571,6 +576,10 @@ async function firstRun(): Promise<void> {
       ui.hint("Have an invite code? npx --yes deploy-forward@latest org join <code> — know the org URL? npx --yes deploy-forward@latest org request <slug>");
     }
   }
+  // L23 launch-anywhere: one quiet pointer for the user who will later run this on a
+  // server or in CI, where the browser device flow can't run — the recipes command
+  // carries the full headless path (setup-token -> DF_DEVICE_TOKEN).
+  ui.hint(LAUNCH_ANYWHERE_HINT);
   ui.blank();
 
   // Passive update nudge (throttled daily, 1.5s cap, fail-silent — update.ts).
@@ -1000,6 +1009,9 @@ async function dashboardAndMonitor(opts: { banner?: boolean; publicityLabel?: st
   const staleBanner = staleVersionBanner({ running: TRACKER_VERSION, latest: await checkForNewerVersion() });
   if (staleBanner) row("Update", ui.c.warn(staleBanner));
   console.log(`  ${ui.c.dim("Ctrl-C closes only this monitor · one-time upload: npx --yes deploy-forward@latest sync")}`);
+  // L23: one quiet line so a returning user knows how to take this headless — the
+  // recipes command owns the detail (setup-token -> DF_DEVICE_TOKEN on the target box).
+  console.log(`  ${ui.c.dim(LAUNCH_ANYWHERE_HINT)}`);
   ui.rule();
 
   await monitorLoop();
@@ -1107,6 +1119,10 @@ function printHelp(): void {
       "      first run: create or link your account; after: dashboard + live monitor",
       "  npx --yes deploy-forward@latest pair",
       "      pair a second machine to this same user",
+      "  npx --yes deploy-forward@latest setup-token",
+      "      mint a device token for another (headless) box, then export",
+      "      DF_DEVICE_TOKEN there",
+      "      --label <name>  name the token in your device list (default: hostname)",
       "  npx --yes deploy-forward@latest start",
       "      the live monitor, no questions asked (hooks already sync)",
       "  npx --yes deploy-forward@latest super-start",
@@ -1121,6 +1137,8 @@ function printHelp(): void {
       "      open your board in the browser",
       "  npx --yes deploy-forward@latest status",
       "      auth, hooks, last sync - the health check",
+      "  npx --yes deploy-forward@latest environments",
+      "      headless recipes: EC2/SSH, CI, container, Cloud Shell (alias: recipes)",
       "  npx --yes deploy-forward@latest usage",
       "      local per-model usage + session windows (no account needed)",
       "  npx --yes deploy-forward@latest usage --by-project",
@@ -1131,6 +1149,8 @@ function printHelp(): void {
       "      any usage view as a JSON array",
       "  npx --yes deploy-forward@latest usage --cost",
       "      adds an EST COST column (public list prices only)",
+      "  npx --yes deploy-forward@latest serve",
+      "      the same view as a local web page (127.0.0.1 only, --port <n>)",
       "  npx --yes deploy-forward@latest pricing set <model>",
       "      --input <usd> --output <usd>: price a model usage --cost can't",
       "      (LOCAL only, never uploaded)",
@@ -1283,6 +1303,13 @@ async function main(): Promise<void> {
     case "pair":
       await pair();
       break;
+    case "setup-token": {
+      // Mint a fresh, revocable device token FOR ANOTHER (headless) box via the browser
+      // pair flow, print it, and persist NOTHING on this machine (see src/auth.ts).
+      const token = await setupToken(flag("label") ? { label: flag("label") } : {});
+      if (!token) process.exitCode = 1;
+      break;
+    }
     case "login":
       // Compatibility alias (0.7.x muscle memory, with or without --github): auth-first
       // means login IS the bare happy path — auth, scan, hooks, profile URL. Typed-code
@@ -1314,6 +1341,14 @@ async function main(): Promise<void> {
       console.log(`  ${url}`);
       break;
     }
+    case "environments":
+    case "recipes":
+      // L23: the launch-anywhere short form. Plain text, width-safe, non-TTY prints the
+      // same clean blocks a TTY does — the whole point is copy-paste into a shell, a
+      // workflow file or a devcontainer.json. Detects the obvious signals cheaply and
+      // leads with that recipe; the canonical long form is docs/environments.md.
+      console.log(renderEnvironments({ appBase: APP_BASE, detected: detectEnvironment() }));
+      break;
     case "sync":
       await syncOnce({ verbose: true }).catch((e) => {
         const msg = (e as Error).message;
@@ -1342,8 +1377,28 @@ async function main(): Promise<void> {
       await status();
       break;
     case "usage":
-      printUsage(usageOptions());
+      await printUsage(usageOptions());
       break;
+    case "serve": {
+      const portIdx = process.argv.indexOf("--port");
+      const rawPort = portIdx >= 0 ? Number(process.argv[portIdx + 1]) : DASHBOARD_DEFAULT_PORT;
+      if (!Number.isInteger(rawPort) || rawPort < 0 || rawPort > 65535) {
+        console.error(`invalid --port: ${process.argv[portIdx + 1]}`);
+        process.exitCode = 2;
+        break;
+      }
+      try {
+        const { url } = await startDashboardServer({ port: rawPort });
+        console.log(`  deploy-forward local dashboard: ${url}`);
+        console.log(`  127.0.0.1 only - nothing leaves this machine. Ctrl+C to stop.`);
+      } catch (e) {
+        console.error(
+          `could not bind 127.0.0.1:${rawPort}${e instanceof Error && "code" in e && (e as NodeJS.ErrnoException).code === "EADDRINUSE" ? " - port in use, try --port <n>" : ""}`,
+        );
+        process.exitCode = 1;
+      }
+      break;
+    }
     case "pricing":
       runPricing();
       break;

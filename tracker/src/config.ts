@@ -488,6 +488,66 @@ function statePath(): string {
   return join(dfHome(), "state.json");
 }
 
+/**
+ * DF_DEVICE_TOKEN shape guard. The server mints `df_` + base64url(32 bytes) — a 43-char
+ * base64url tail (functions/src/pairing.ts, functions/src/githubDevice.ts). A headless
+ * box's env token must LOOK like that: a bearer credential is never trusted just because
+ * some env var is non-empty. Lenient on the tail length (≥20 base64url chars) so a future
+ * token width still validates, strict on the `df_` prefix + charset so obvious garbage
+ * (spaces, punctuation, a stray shell expansion) is rejected.
+ */
+export function isValidDeviceToken(token: string): boolean {
+  return /^df_[A-Za-z0-9_-]{20,}$/.test(token);
+}
+
+/** Values already warned about this process, so a malformed DF_DEVICE_TOKEN prints its
+ * one-line note ONCE, not on every loadState() call a command makes. */
+const garbageTokenWarned = new Set<string>();
+
+/**
+ * Read + classify DF_DEVICE_TOKEN. Twelve-factor: a headless box (EC2/CI/container) is
+ * controlled by its ENV, so a set-and-valid token is the effective device token and WINS
+ * over any on-disk token. A set-but-malformed token is a broken declaration, not a reason
+ * to fall back to a stale disk token — the box is treated as unauthed (a one-line stderr
+ * note is emitted once). Unset/empty means "no override; use whatever is on disk".
+ */
+function envDeviceToken(): { kind: "none" } | { kind: "valid"; token: string } | { kind: "invalid" } {
+  const raw = process.env.DF_DEVICE_TOKEN;
+  if (raw === undefined) return { kind: "none" };
+  const token = raw.trim();
+  if (token === "") return { kind: "none" };
+  return isValidDeviceToken(token) ? { kind: "valid", token } : { kind: "invalid" };
+}
+
+/** The effective device token given the disk value, applying the DF_DEVICE_TOKEN override.
+ * The env token is never persisted (see saveState) — this is a READ-time overlay only. */
+function applyEnvTokenOverride(diskToken: string | null): string | null {
+  const env = envDeviceToken();
+  if (env.kind === "valid") return env.token; // env wins over disk (twelve-factor)
+  if (env.kind === "invalid") {
+    const raw = process.env.DF_DEVICE_TOKEN as string;
+    if (!garbageTokenWarned.has(raw)) {
+      garbageTokenWarned.add(raw);
+      console.error(
+        "  ! DF_DEVICE_TOKEN is set but does not look like a device token (expected df_…) — treating this box as unauthenticated.",
+      );
+    }
+    return null; // treat as unauthed; a sync that needs auth fails with not_paired
+  }
+  return diskToken;
+}
+
+/** The device token currently on disk (or null), read WITHOUT applying the env override —
+ * used by saveState to keep the persisted token as disk truth, never the env credential. */
+function diskDeviceToken(): string | null {
+  try {
+    const parsed = JSON.parse(readFileSync(statePath(), "utf8")) as { deviceToken?: unknown };
+    return typeof parsed.deviceToken === "string" ? parsed.deviceToken : null;
+  } catch {
+    return null;
+  }
+}
+
 export function loadState(): TrackerState {
   const p = statePath();
   if (existsSync(p)) {
@@ -500,7 +560,10 @@ export function loadState(): TrackerState {
       const scanHealth = storedEpoch === PARSER_EPOCH ? sanitizeScanHealth(parsed.scanHealth) : undefined;
       return {
         apiBase: parsed.apiBase ?? DEFAULT_API_BASE,
-        deviceToken: parsed.deviceToken ?? null,
+        // DF_DEVICE_TOKEN (when set + well-shaped) is the effective token and WINS over the
+        // on-disk one — a headless box is controlled by its env. Never written back to disk
+        // by this read path (saveState strips it); the box's env stays the source of truth.
+        deviceToken: applyEnvTokenOverride(parsed.deviceToken ?? null),
         uid: parsed.uid ?? null,
         handle: parsed.handle ?? null,
         repoHmacKey: parsed.repoHmacKey ?? randomBytes(32).toString("hex"),
@@ -552,7 +615,9 @@ export function loadState(): TrackerState {
   }
   return {
     apiBase: DEFAULT_API_BASE,
-    deviceToken: null,
+    // A fresh/ephemeral box with no state file still authenticates purely by its env token
+    // (uid is display-only; ingest authenticates by token). Garbage env → null (unauthed).
+    deviceToken: applyEnvTokenOverride(null),
     uid: null,
     handle: null,
     repoHmacKey: randomBytes(32).toString("hex"),
@@ -568,12 +633,22 @@ export function loadState(): TrackerState {
 
 export function saveState(state: TrackerState): void {
   mkdirSync(dfHome(), { recursive: true });
+  // The security lynchpin of headless auth: DF_DEVICE_TOKEN is a READ-time override, never
+  // a persisted value. A headless box may be read-only or ephemeral and its env is the sole
+  // source of truth, so if the state we are about to persist carries the env token as its
+  // deviceToken (loadState injected it), swap it back to the on-disk token — usually null —
+  // so a sync pass that legitimately saves cursors/digests never leaks the credential to disk.
+  let toPersist = state;
+  const env = envDeviceToken();
+  if (env.kind === "valid" && state.deviceToken === env.token) {
+    toPersist = { ...state, deviceToken: diskDeviceToken() };
+  }
   // Atomic write: temp file + rename. Hooks spawn concurrent syncs, and a reader that
   // catches a half-written state.json parse-fails into an EMPTY ledger (the "files
   // Claude 0 / Codex 0" header bug) — and can then SAVE that emptiness, wiping the
   // cursors. rename() replaces in one step on both POSIX and Windows (MOVEFILE_REPLACE_EXISTING).
   const tmp = statePath() + `.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(state, null, 2), { mode: 0o600 });
+  writeFileSync(tmp, JSON.stringify(toPersist, null, 2), { mode: 0o600 });
   renameSync(tmp, statePath());
 }
 

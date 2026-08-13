@@ -13,7 +13,13 @@ import { basename, dirname } from "node:path";
 import { findSources, findCodexTranscripts, summarizeClaudeCorpus, summarizeFile } from "./sync.js";
 import { extractClaudeAtoms, dedupeClaudeUsageEntries, type ClaudeUsageEntry } from "./jsonl.js";
 import { parseCodexRollout } from "./codex.js";
-import { collectGrokUsageEvents, isOfficialGrokCli, summarizeGrokCorpus } from "./grok.js";
+import { collectGrokUsageEvents, isOfficialGrokCli, summarizeGrokCorpus, readLatestGrokCredits } from "./grok.js";
+import { isOfficialPiCli, scanPiCorpus } from "./pi.js";
+import { isOfficialOpenClawCli, scanOpenClawCorpus } from "./openclaw.js";
+import { isOfficialOpencodeHome, scanOpencodeCorpus, opencodeHome } from "./opencode.js";
+import { isOfficialHermesCli, scanHermesCorpus, hermesHome } from "./hermes.js";
+import { isOfficialCopilotCli, scanCopilotCorpus, copilotHome } from "./copilot.js";
+import { composeLimitLanes, limitLaneTextLines, currentClaudeVendorLanes, type ClaudeVendorLanes } from "./limitLanes.js";
 import { loadState, type TrackerState } from "./config.js";
 import { listUserRates } from "./userRates.js";
 import type { SessionSummary, TokenCounts, ModelTokens, UserRate } from "./types.js";
@@ -71,29 +77,66 @@ export function foldModelRows(summaries: Pick<SessionSummary, "models">[]): { ro
  * rows. Model ids stay verbatim (`grok-4.6`, `grok-4.5`, …) with input/output/cache
  * from each `shell.turn.inference_done` line.
  */
+/** One harness's read-only session summaries, named for display grouping. */
+export interface HarnessSummaries {
+  name: string;
+  summaries: SessionSummary[];
+}
+
+/** The six adapter-provider scans, each behind its own official-tool fingerprint — the
+ * SAME gates and entry points syncOnce uses, minus every persistence step. Moved here
+ * from superStart so `usage` and the localhost dashboard fold the SAME corpus (Marco
+ * 2026-08-13: the dashboard showed all eight harnesses while `usage` folded three —
+ * two surfaces, two answers). A locked db or vanished home yields [] for that
+ * harness, never a crash. */
+const ADAPTER_SCANS: { name: string; scan: (state: TrackerState) => SessionSummary[] }[] = [
+  { name: "Grok", scan: (st) => (isOfficialGrokCli() ? summarizeGrokCorpus(st) : []) },
+  { name: "pi", scan: (st) => (isOfficialPiCli() ? scanPiCorpus(st).sessions : []) },
+  { name: "OpenClaw", scan: (st) => (isOfficialOpenClawCli() ? scanOpenClawCorpus(st).sessions : []) },
+  { name: "opencode", scan: (st) => (isOfficialOpencodeHome() ? scanOpencodeCorpus(st, opencodeHome()).sessions : []) },
+  { name: "Hermes", scan: (st) => (isOfficialHermesCli() ? scanHermesCorpus(st, hermesHome()).sessions : []) },
+  { name: "Copilot", scan: (st) => (isOfficialCopilotCli() ? scanCopilotCorpus(st, copilotHome()).sessions : []) },
+];
+
+/**
+ * One read-only pass over EVERY harness's local corpus — Claude/Codex through the
+ * native summarizers, the other six through their adapters' scan functions behind
+ * the same fingerprint gates syncOnce uses. THE single composition seam: `usage`,
+ * `--by-project`, and the localhost dashboard (readShowcaseData) all consume this,
+ * so no surface can ever fold a different corpus than another. Never advances a
+ * cursor or digest: every scan gets a fresh structuredClone throwaway.
+ */
+export function readAllHarnessSummaries(state: TrackerState): HarnessSummaries[] {
+  const sources = findSources();
+  const claude = sources.filter((s) => s.tool === "claude_code");
+  const claudeSummaries =
+    claude.length > 0
+      ? summarizeClaudeCorpus(
+          claude.map((s) => ({ path: s.path, subagents: s.subagents })),
+          structuredClone(state),
+        )
+      : [];
+  const codexSummaries = sources
+    .filter((s) => s.tool === "codex")
+    .map((s) => summarizeFile(s.path, structuredClone(state), "codex", []))
+    .filter((s): s is SessionSummary => s !== null && s !== undefined);
+  const adapters = ADAPTER_SCANS.map(({ name, scan }) => {
+    try {
+      return { name, summaries: scan(structuredClone(state)) };
+    } catch {
+      return { name, summaries: [] as SessionSummary[] }; // a locked db must never kill a view
+    }
+  });
+  return [
+    { name: "Claude Code", summaries: claudeSummaries },
+    { name: "Codex", summaries: codexSummaries },
+    ...adapters,
+  ];
+}
+
 export function readLocalModelRows(): { rows: UsageRow[]; total: UsageRow } {
   const state: TrackerState = loadState();
-  const sources = findSources();
-  const summaries: Pick<SessionSummary, "models">[] = [];
-
-  const claude = sources.filter((s) => s.tool === "claude_code");
-  if (claude.length > 0) {
-    summaries.push(
-      ...summarizeClaudeCorpus(
-        claude.map((s) => ({ path: s.path, subagents: s.subagents })),
-        structuredClone(state),
-      ),
-    );
-  }
-  for (const s of sources) {
-    if (s.tool !== "codex") continue;
-    const summary = summarizeFile(s.path, structuredClone(state), "codex", []);
-    if (summary) summaries.push(summary);
-  }
-  if (isOfficialGrokCli()) {
-    summaries.push(...summarizeGrokCorpus(structuredClone(state)));
-  }
-  return foldModelRows(summaries);
+  return foldModelRows(readAllHarnessSummaries(state).flatMap((h) => h.summaries));
 }
 
 // ---- Per-project fold (usage --by-project) -------------------------------------------------
@@ -190,10 +233,17 @@ export function readLocalProjectRows(): ProjectRow[] {
     if (summary) push(summary.cwd ?? "(unknown)", [summary]);
   }
 
-  if (isOfficialGrokCli()) {
-    for (const summary of summarizeGrokCorpus(structuredClone(state))) {
-      push(summary.cwd ?? "(unknown)", [summary]);
+  // Adapter harnesses: label = the summary's own recorded cwd (verbatim, same posture
+  // as Codex), "(unknown)" when the session carries none. Same fingerprint gates and
+  // fail-soft as readAllHarnessSummaries — one corpus, every view.
+  for (const { scan } of ADAPTER_SCANS) {
+    let summaries: SessionSummary[];
+    try {
+      summaries = scan(structuredClone(state));
+    } catch {
+      continue; // a locked db must never kill a view
     }
+    for (const summary of summaries) push(summary.cwd ?? "(unknown)", [summary]);
   }
 
   const groups = [...byProject.entries()].map(([project, summaries]) => ({ project, summaries }));
@@ -786,7 +836,7 @@ export interface UsageOptions {
   cost?: boolean;
 }
 
-function printModelTable(opts: UsageOptions): void {
+function printModelTable(opts: UsageOptions, vendor: ClaudeVendorLanes): void {
   console.log(`  ${ui.c.bold("Local usage")} ${ui.c.dim("- per-model totals from this machine's transcripts (metadata only)")}`);
   console.log("");
 
@@ -847,9 +897,17 @@ function printModelTable(opts: UsageOptions): void {
     console.log(`  ${ui.c.dim("or share the ids to help us price them: df config share-unknown-models on")}`);
   }
 
-  console.log(`  ${formatCodexLimitsLine(readLatestCodexRateLimits())}`);
+  // The SAME lane composition the localhost dashboard renders (limitLanes.ts) —
+  // one seam, two surfaces, so they can never disagree (Marco 2026-08-13).
   const now = Date.now();
-  console.log(`  ${formatClaude5hLine(computeCurrent5hBlock(collectRecentClaudeEntries(now), now))}`);
+  const lanes = composeLimitLanes({
+    codexLimits: readLatestCodexRateLimits(),
+    claudeLanes: vendor.lanes,
+    claudeLanesNote: vendor.note,
+    claude5h: computeCurrent5hBlock(collectRecentClaudeEntries(now), now),
+    grokCredits: isOfficialGrokCli() ? readLatestGrokCredits() : null,
+  });
+  for (const line of limitLaneTextLines(lanes)) console.log(`  ${line}`);
   console.log("");
 }
 
@@ -905,7 +963,7 @@ function printDayTable(opts: UsageOptions): void {
  * no ANSI, no footers) and prints the same rows a table view would show as a JSON array, so a
  * script gets exactly what a human sees with the same flags -- never a different shape.
  */
-export function printUsage(opts: UsageOptions = {}): void {
+export async function printUsage(opts: UsageOptions = {}): Promise<void> {
   if (opts.json) {
     const jsonRows =
       opts.by === "project"
@@ -920,5 +978,11 @@ export function printUsage(opts: UsageOptions = {}): void {
   ui.banner();
   if (opts.by === "project") printProjectTable(opts);
   else if (opts.by === "day") printDayTable(opts);
-  else printModelTable(opts);
+  else {
+    // Vendor lanes for the footer: consent-gated + fail-soft, and time-boxed so a
+    // dead network can never hang a local table (abort -> the "network" note).
+    const timeboxed: typeof fetch = (input, init) =>
+      fetch(input, { ...init, signal: AbortSignal.timeout(3000) });
+    printModelTable(opts, await currentClaudeVendorLanes(timeboxed));
+  }
 }

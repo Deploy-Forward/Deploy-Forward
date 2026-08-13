@@ -56,6 +56,7 @@ npx --yes deploy-forward@latest usage --by-day      # per-day totals, last 30 da
 npx --yes deploy-forward@latest usage --by-project  # per-project token attribution
 npx --yes deploy-forward@latest usage --json        # any view as a JSON array
 npx --yes deploy-forward@latest usage --cost        # EST COST column at public list prices
+npx --yes deploy-forward@latest serve               # the same view as a local web page (127.0.0.1)
 
 # Price a model the bundled table doesn't know (local only, never uploaded)
 npx --yes deploy-forward@latest pricing set <model> --input <usd> --output <usd>
@@ -104,6 +105,9 @@ npx --yes deploy-forward@latest uninstall    # remove the Claude Code presence h
   silent zero.
 - **JSON everything** — every usage view exports structured JSON for your own
   tooling.
+- **Local web dashboard** — `deploy-forward serve` renders the same usage, spend,
+  and limit data as a brand-clean page on `127.0.0.1` (loopback only, zero
+  external asset loads, re-read from disk on every refresh).
 - **The Board, opt-in** — GitHub device-flow identity (no typed usernames, so no
   spoofing), server-verified outcomes, and a rank that spending can never buy:
   tokens and sessions only ever appear in an efficiency denominator.
@@ -113,10 +117,10 @@ npx --yes deploy-forward@latest uninstall    # remove the Claude Code presence h
 
 ## Roadmap
 
-- **Beyond the terminal** — today the local views live in your CLI. We see them
-  living in your notch, in a system-tray service, or hosted locally in your
-  browser: the same usage, spend, and limit data, always on glanceable surfaces,
-  same privacy posture. Coming soon.
+- **Beyond the terminal** — the locally-hosted browser view shipped as
+  `deploy-forward serve`. Next: your notch and a system-tray service — the same
+  usage, spend, and limit data on always-glanceable surfaces, same privacy
+  posture. Coming soon.
 - **Remaining-usage bars for every limit lane** — Claude's 5-hour and weekly lanes
   currently render as text (window opened / resets at); they should carry the same
   percent-used bar the Codex and Grok weekly lanes already have.
