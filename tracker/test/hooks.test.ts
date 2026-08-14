@@ -78,6 +78,50 @@ const beatCmd = (path: string, event: string) => ({
 const countBeats = (arr: any[]) =>
   arr.filter((e) => e?._source === "deployforward-buildboard" || isDfBeatEntry(e)).length;
 
+test("healHooks: re-pins a beat entry whose cached binary vanished (the 0.25.0 npx-cache eviction)", () => {
+  // Field failure 2026-08-14: every hook pinned an _npx cache dir that a cache
+  // purge + publish swap deleted, so ALL session events errored MODULE_NOT_FOUND —
+  // and nothing healed it, because installHooks is gated on !hooksInstalled()
+  // (entries present, just dead) and heal only collapsed duplicates. A SINGLE
+  // entry whose pinned file no longer exists must be re-pinned to the running
+  // invocation.
+  const dir = mkdtempSync(pj(tmpdir(), "df-heal-dead-"));
+  const settingsFile = pj(dir, "settings.json");
+  const prevS = process.env.DF_CLAUDE_SETTINGS;
+  const prevG = process.env.DF_GROK_HOME;
+  try {
+    process.env.DF_CLAUDE_SETTINGS = settingsFile;
+    process.env.DF_GROK_HOME = pj(dir, "no-grok");
+    const dead = pj(dir, "evicted-cache", "deploy-forward", "dist", "bin", "df.js"); // never created
+    const foreign = { hooks: [{ type: "command", command: "python -m ola_brain.cli hook post-tool-use" }] };
+    wf(
+      settingsFile,
+      JSON.stringify({
+        hooks: {
+          Stop: [beatCmd(dead, "Stop"), foreign],
+        },
+      }),
+    );
+
+    healHooks();
+
+    const out = JSON.parse(rf(settingsFile, "utf8"));
+    assert.equal(countBeats(out.hooks.Stop), 1, "still exactly one beat entry");
+    const healed = out.hooks.Stop.find((e: any) => e._source);
+    assert.ok(!healed.hooks[0].command.includes("evicted-cache"), "the dead path must be re-pinned, not kept");
+    assert.ok(
+      out.hooks.Stop.some((e: any) => e.hooks?.[0]?.command?.includes("ola_brain")),
+      "foreign hook preserved",
+    );
+  } finally {
+    if (prevS === undefined) delete process.env.DF_CLAUDE_SETTINGS;
+    else process.env.DF_CLAUDE_SETTINGS = prevS;
+    if (prevG === undefined) delete process.env.DF_GROK_HOME;
+    else process.env.DF_GROK_HOME = prevG;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("healHooks: collapses duplicate beat entries in settings.json to one, preserves foreign hooks", () => {
   const dir = mkdtempSync(pj(tmpdir(), "df-heal-settings-"));
   const settingsFile = pj(dir, "settings.json");

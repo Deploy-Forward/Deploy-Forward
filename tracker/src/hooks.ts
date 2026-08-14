@@ -154,7 +154,40 @@ function collapseDuplicateBeats(hooksMap: Record<string, unknown>, invoke: strin
   return changed;
 }
 
-/** Heal one JSON settings file's hooks map, writing ONLY if a duplicate was collapsed.
+/** The pinned entry path inside a beat command (`"node" "<entry>" beat ...`), or null
+ * for the npx-fallback form (`npx -y deploy-forward beat ...`), which has no path to rot. */
+function pinnedEntryOf(command: string): string | null {
+  const m = /^"[^"]+" "([^"]+)" beat /.exec(command);
+  return m ? m[1] : null;
+}
+
+/** Re-pin OUR beat entries whose pinned binary no longer exists — the npx cache is
+ * disposable (a purge, or a publish swapping @latest to a new cache dir, deletes the
+ * old install) and a dead pin makes EVERY session event error MODULE_NOT_FOUND.
+ * installHooks never repairs this (`!hooksInstalled()` short-circuits on entries that
+ * are present-but-dead), so the heal is the only path back. */
+function repinDeadBeats(
+  hooksMap: Record<string, unknown>,
+  invoke: string,
+  fileExists: (p: string) => boolean = existsSync,
+): boolean {
+  let changed = false;
+  for (const event of Object.keys(hooksMap)) {
+    const list = Array.isArray(hooksMap[event]) ? (hooksMap[event] as unknown[]) : [];
+    hooksMap[event] = list.map((e) => {
+      const entry = e as { _source?: string; hooks?: { command?: string }[] };
+      if (entry?._source !== DF_TAG && !isDfBeatEntry(e)) return e;
+      const pinned = pinnedEntryOf(entry.hooks?.[0]?.command ?? "");
+      if (pinned === null || fileExists(pinned)) return e;
+      changed = true;
+      return dfHookEntry(event, invoke);
+    });
+  }
+  return changed;
+}
+
+/** Heal one JSON settings file's hooks map, writing ONLY when something actually
+ * changed (a duplicate collapsed, or a dead pin replaced).
  * Soft: a missing or unparseable file is left untouched (never clobber the user's config). */
 function healHookFile(path: string, hooksAt: (doc: any) => Record<string, unknown> | undefined): void {
   if (!existsSync(path)) return;
@@ -166,7 +199,10 @@ function healHookFile(path: string, hooksAt: (doc: any) => Record<string, unknow
   }
   const map = hooksAt(doc);
   if (!map || typeof map !== "object") return;
-  if (collapseDuplicateBeats(map, cliInvocation())) {
+  const invoke = cliInvocation();
+  const collapsed = collapseDuplicateBeats(map, invoke);
+  const repinned = repinDeadBeats(map, invoke);
+  if (collapsed || repinned) {
     writeFileSync(path, JSON.stringify(doc, null, 2));
   }
 }
