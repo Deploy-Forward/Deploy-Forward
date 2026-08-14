@@ -55,6 +55,7 @@ import {
 import { formatProviderCounts, monitorStats } from "../src/monitorStats.js";
 import { startDashboardServer, DASHBOARD_DEFAULT_PORT } from "../src/localDashboard.js";
 import { limitsCliFlag } from "../src/limitsFetch.js";
+import { privacyContractLines } from "../src/privacyContract.js";
 import {
   buildLiveSpendPush,
   liveSpendEnabled,
@@ -152,7 +153,19 @@ async function connectDeviceCeremony(): Promise<ConnectResult> {
  * mints. Extracting it lets the three questions run in the correct order — board, then
  * (if paired) org, then billing — instead of org having to reach INTO this function.
  */
+/** The honest screen at the doorstep: the tested can-leave / never-leaves contract,
+ * printed once per flow at the moment of decision — here (before the board question)
+ * and in firstRun (before its ceremony), never inside connectDeviceCeremony, which
+ * both paths share and would double-print. */
+function printPrivacyContract(): void {
+  for (const line of privacyContractLines()) {
+    console.log(line === "" ? "" : `        ${line.startsWith("  ") ? ui.c.dim(line) : line}`);
+  }
+  console.log();
+}
+
 async function askSuperStartOnboarding(): Promise<boolean> {
+  printPrivacyContract();
   console.log(`        ${ui.c.bold("Put this device's usage on the board?")}`);
   console.log(`        ${ui.c.dim("Pairs this device to your profile, or creates one — other devices can")}`);
   console.log(`        ${ui.c.dim("share the same account. Decline and everything here stays local.")}`);
@@ -463,6 +476,7 @@ async function firstRun(): Promise<void> {
     process.exitCode = 1;
     return;
   }
+  printPrivacyContract();
   const result = await connectDeviceCeremony();
   if (result.status === "declined") {
     ui.todo("Skipped. Local usage works without an account: npx --yes deploy-forward@latest usage");

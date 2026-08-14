@@ -45,3 +45,6 @@ jobs:
       - run: node scripts/check-no-transcripts.mjs
       # usage-core is canonical; tracker/src/core must be its byte-identical copy.
       - run: node usage-core/sync.mjs && git diff --exit-code
+      # The docs pin exact install versions on purpose; a pin that lags the
+      # package version silently recommends an old artifact. Fail instead.
+      - run: node scripts/check-readme-version.mjs

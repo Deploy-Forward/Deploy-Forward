@@ -1,6 +1,7 @@
 # Deploy Forward — the open capture layer
 
 [![npm version](https://img.shields.io/npm/v/deploy-forward.svg)](https://www.npmjs.com/package/deploy-forward)
+[![npm downloads](https://img.shields.io/npm/dt/deploy-forward.svg)](https://www.npmjs.com/package/deploy-forward)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![CI](https://github.com/Deploy-Forward/Deploy-Forward/actions/workflows/ci.yml/badge.svg)](https://github.com/Deploy-Forward/Deploy-Forward/actions/workflows/ci.yml)
 
@@ -9,17 +10,50 @@ The tracker, the usage core, and the capture contract behind
 every model and every harness, and — when you opt in — the public
 [Board](https://leaderboard.deployforward.dev).
 
-**View it live: https://deployforward.dev**
+## What this tool does to your machine — read this first
 
-Same data, your choice of surface:
+This CLI reads your local agent session stores (Claude Code, Codex, Grok CLI, pi,
+OpenClaw, opencode, Hermes, Copilot CLI, Gemini CLI) and parses them for **counters
+and timestamps**. Agent transcripts often sit next to sensitive material, so be
+explicit about the risk model before running anything:
 
-- `npx --yes deploy-forward@latest usage` — the CLI: per-model table, real
-  remaining-usage bars for every vendor-reported limit lane
-- `npx --yes deploy-forward@latest serve` — the same view as a local web page
-  at `127.0.0.1:4780` (loopback only, nothing leaves your machine)
+- **Local-only commands (`usage`, `serve`) never touch the network.** No account, no
+  token, nothing leaves the machine. This is the default way to try it.
+- **If you opt in to sync**, the wire carries metadata only: token counts,
+  timestamps, model names, durations, and a local repo hash. Never prompts, code,
+  file names, working directories, or credentials. That list is not policy prose —
+  it is an explicit field whitelist (`toIngest()`) pinned by tests, specified
+  field-by-field in [`contract/WIRE.md`](./contract/WIRE.md) and
+  [`contract/PRIVACY.md`](./contract/PRIVACY.md).
+- **The residual risk is honest**: this is a young project. The client is auditable
+  (zero production dependencies, provenance-attested releases you can
+  [verify yourself](./SECURITY.md#verify-a-release)); the hosted service is closed
+  and you trust its operator. No independent security review has been completed yet
+  — see [the review status](#security--privacy-review) below. If your transcripts
+  are highly sensitive, read the parsers before you run them, or stay local-only.
 
-Both render the same fold and the same limit lanes from one shared seam, so
+## Try it — local first
+
+No account, no network, loopback only. Pinned to an exact version on purpose: an
+exact version is what you can audit, and what the provenance attestation signs.
+
+```sh
+npx --yes deploy-forward@0.26.0 usage    # per-model table, vendor limit lanes, api-equivalent spend
+npx --yes deploy-forward@0.26.0 serve    # the same view as a local web page at 127.0.0.1:4780
+```
+
+`npx --yes deploy-forward@latest` is the convenience path — fine once you trust the
+release cadence, but a floating tag means tomorrow's code runs with today's consent.
+Pin when it matters.
+
+Both surfaces render the same fold and the same limit lanes from one shared seam, so
 they can never disagree.
+
+**Want the [Board](https://leaderboard.deployforward.dev)?** That is the optional
+step: run `npx --yes deploy-forward@0.26.0` bare and it will show you the capture
+contract, then **ask** whether to put this device's usage on the board — GitHub
+device-flow sign-in, hooks, and metadata sync happen only after that yes. Declining
+keeps everything local; `logout` and `uninstall` fully withdraw consent later.
 
 ![The deploy-forward live dashboard: eight harnesses scanned, 15.7B tokens read, $9.2K api-equivalent spend, vendor limit lanes, and the model mix](./.github/assets/super-start.png)
 
@@ -39,9 +73,7 @@ they can never disagree.
 > verifiability, explicit consent.
 
 The server assumes a hostile client, so publishing the client costs the service
-nothing — and buys you auditability: you can read exactly what leaves your machine
-(spoiler: token counts, timestamps, model names, durations, and a local repo hash;
-never your prompts, code, or file names).
+nothing — and buys you auditability: you can read exactly what leaves your machine.
 
 ## Why this exists
 
@@ -127,6 +159,19 @@ Trust is a ladder (`self_reported` → `device_verified` → `otel_verified` →
 it. Exact thresholds are intentionally unpublished; the dispositions and semantics
 are in [`contract/WIRE.md`](./contract/WIRE.md).
 
+## Security & privacy review
+
+**Status: no independent review yet.** The privacy guarantees above are enforced by
+this repository's own tests; what they have not had is outside adversarial scrutiny.
+We are seeking a short, focused external review — the scope is published at
+[`docs/security-review-scope.md`](./docs/security-review-scope.md) so any reviewer
+can start immediately. When a review completes, its date, reviewer, scope, and full
+report will be recorded here permanently, findings included. Until then, treat the
+claims as what they are: test-pinned, but self-audited.
+
+How to verify what CAN be verified today — the release provenance chain — is in
+[SECURITY.md](./SECURITY.md#verify-a-release) and takes about 30 seconds.
+
 ## Develop
 
 ```sh
@@ -146,16 +191,18 @@ To change a model rate, tier band, or context window: edit `usage-core/src/`, ru
 `node usage-core/sync.mjs`, and commit what it touched — never edit a `src/core/`
 copy (the coreParity test and CI's sync-parity guard both fail on drift; the full
 procedure is in [`usage-core/README.md`](./usage-core/README.md)).
-The CI in this repo runs the same commands plus two guards: the transcript tripwire
-(`scripts/check-no-transcripts.mjs` — no real usage data can ever enter this tree)
-and usage-core sync parity.
+The CI in this repo runs the same commands plus three guards: the transcript tripwire
+(`scripts/check-no-transcripts.mjs` — no real usage data can ever enter this tree),
+usage-core sync parity, and the README pinned-version check
+(`scripts/check-readme-version.mjs` — the exact-version install commands above can
+never go stale).
 
 ## Registries
 
-npmjs is the front door: `npx --yes deploy-forward@latest`. The same package is
-mirror-published to GitHub Packages as `@deploy-forward/deploy-forward`
-(owner-scoped, as that registry requires). GitHub Packages needs a token with
-`read:packages` even for public installs — if you want it anyway:
+npmjs is the front door. The same package is mirror-published to GitHub Packages as
+`@deploy-forward/deploy-forward` (owner-scoped, as that registry requires). GitHub
+Packages needs a token with `read:packages` even for public installs — if you want
+it anyway:
 
 ```sh
 echo "@deploy-forward:registry=https://npm.pkg.github.com" >> ~/.npmrc
