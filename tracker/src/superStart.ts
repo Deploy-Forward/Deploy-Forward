@@ -27,8 +27,8 @@ import { isOfficialCopilotCli, copilotHome, copilotDbPath } from "./copilot.js";
 import { loadState, saveState, markOnboarded, APP_BASE, type TrackerState } from "./config.js";
 import type { SessionSummary, SessionContext } from "./types.js";
 import { windowForSession } from "./contextWindows.js";
-import { fetchClaudeLimits, resolveLimitsConsent, claudeCredentialsPath } from "./limitsFetch.js";
-export { resolveLimitsConsent, claudeCredentialsPath };
+import { fetchClaudeLimits, resolveLimitsConsent, claudeCredentialsPath, limitsCliFlag } from "./limitsFetch.js";
+export { resolveLimitsConsent, claudeCredentialsPath, limitsCliFlag };
 import { staleVersionBanner } from "./update.js";
 // homedir/join left with claudeCredentialsPath when it moved to limitsFetch.ts.
 // basename is deliberately NOT imported here: the one place this file needed it
@@ -1314,7 +1314,7 @@ export function composeScreen(data: ShowcaseData, size: ScreenSize, p: number, l
   const historyHeader = spendMode ? "ESTIMATED SPEND · LAST 30 DAYS" : "TOKEN VOLUME · LAST 30 DAYS";
   const chartHeader =
     page === "limits"
-      ? "LIMITS · WHAT'S LEFT · disk-reported only"
+      ? "LIMITS · WHAT'S LEFT"
       : liveMode
         ? `LIVE SESSIONS · TOKENS SINCE SUPER-START${live?.pushing ? " · SYNCING TO BOARD" : ""}`
         : historyHeader;

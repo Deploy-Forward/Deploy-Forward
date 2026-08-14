@@ -484,6 +484,18 @@ test("resolveLimitsConsent: {stateTrue, flagAbsent} -> true (fetch) -- a persist
   assert.equal(SS.resolveLimitsConsent(undefined, true), true);
 });
 
+// The 0.25.0 field regression (Marco's screenshot, 2026-08-13): bin passed
+// hasFlag("limits") — false when the flag is absent — and an explicit false is a
+// per-run DECLINE, so every bare `npx deploy-forward` run silently masked a
+// persisted opt-in and the watch fell back to the 5h estimate. The argv
+// translation is now its own pinned seam: presence -> true, absence -> undefined
+// (defer to persisted), NEVER false from mere absence.
+test("limitsCliFlag: --limits present -> true; absent -> undefined, never a synthetic decline", () => {
+  assert.equal(SS.limitsCliFlag(["node", "df", "--limits"]), true);
+  assert.equal(SS.limitsCliFlag(["node", "df"]), undefined);
+  assert.equal(SS.resolveLimitsConsent(SS.limitsCliFlag(["node", "df"]), true), true, "the exact regression: bare run + persisted opt-in must fetch");
+});
+
 test("resolveLimitsConsent: {stateFalsy(false), flagPresent(true)} -> true (fetch) -- the flag is a real per-run override", () => {
   assert.equal(SS.resolveLimitsConsent(true, false), true);
 });

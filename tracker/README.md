@@ -51,6 +51,7 @@ pnpm dlx deploy-forward
 
 ```sh
 # Local usage views (no account needed)
+# Same data, your choice of surface: `usage` in the terminal, `serve` in the browser.
 npx --yes deploy-forward@latest usage               # per-model totals + session windows
 npx --yes deploy-forward@latest usage --by-day      # per-day totals, last 30 days
 npx --yes deploy-forward@latest usage --by-project  # per-project token attribution

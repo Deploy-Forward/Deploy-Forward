@@ -7,9 +7,15 @@ every model and every harness, and — when you opt in — the public
 
 **View it live: https://deployforward.dev**
 
-```sh
-npx --yes deploy-forward@latest usage
-```
+Same data, your choice of surface:
+
+- `npx --yes deploy-forward@latest usage` — the CLI: per-model table, real
+  remaining-usage bars for every vendor-reported limit lane
+- `npx --yes deploy-forward@latest serve` — the same view as a local web page
+  at `127.0.0.1:4780` (loopback only, nothing leaves your machine)
+
+Both render the same fold and the same limit lanes from one shared seam, so
+they can never disagree.
 
 ![The deploy-forward live dashboard: eight harnesses scanned, 15.7B tokens read, $9.2K api-equivalent spend, vendor limit lanes, and the model mix](./.github/assets/super-start.png)
 

@@ -54,6 +54,7 @@ import {
 } from "../src/orgContext.js";
 import { formatProviderCounts, monitorStats } from "../src/monitorStats.js";
 import { startDashboardServer, DASHBOARD_DEFAULT_PORT } from "../src/localDashboard.js";
+import { limitsCliFlag } from "../src/limitsFetch.js";
 import {
   buildLiveSpendPush,
   liveSpendEnabled,
@@ -938,7 +939,10 @@ async function runShowcase(initialView?: "watch" | "settings"): Promise<void> {
   // back (the v1 exit-and-launch is retired), so there is nothing to dispatch here.
   await runSuperStart({
     static: hasFlag("static"),
-    limits: hasFlag("limits"),
+    // limitsCliFlag, NOT hasFlag: absence must defer to the persisted opt-in.
+    // hasFlag's false here was an explicit per-run decline that masked consent
+    // on every bare run (the 0.25.0 estimate-instead-of-vendor-lanes bug).
+    limits: limitsCliFlag(process.argv),
     // D17 Privacy row: the persisted redact toggle is the default; --redact stays a
     // per-run additive override.
     redact: hasFlag("redact") || loadState().redact === true,

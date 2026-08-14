@@ -42,6 +42,15 @@ export function resolveLimitsConsent(flag: boolean | undefined, statePersisted: 
   return flag ?? statePersisted ?? false;
 }
 
+/** argv -> the per-run flag for resolveLimitsConsent: `--limits` present -> true,
+ * absent -> undefined (defer to the persisted opt-in). NEVER false from mere
+ * absence — bin once passed hasFlag("limits") here, and that synthetic false was
+ * an explicit per-run decline masking every persisted opt-in (the 0.25.0 watch
+ * showed the 5h estimate while `usage` and `serve` rendered real vendor lanes). */
+export function limitsCliFlag(argv: readonly string[]): true | undefined {
+  return argv.includes("--limits") ? true : undefined;
+}
+
 /** The env-overridable Claude Code credentials location — one source for every caller. */
 export function claudeCredentialsPath(): string {
   return process.env.DF_CLAUDE_CREDENTIALS ?? join(homedir(), ".claude", ".credentials.json");
