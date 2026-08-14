@@ -1,0 +1,41 @@
+# Publish to npmjs via TRUSTED PUBLISHING (OIDC) with provenance.
+#
+# WHY: the npm package must be PROVABLY built from this public repository, not
+# just claimed to be. Trusted publishing exchanges this workflow's OIDC token
+# directly with npmjs — no npm token exists anywhere — and --provenance attaches
+# a signed attestation binding the tarball to the exact commit and workflow run
+# that produced it. npm displays the provenance badge; anyone can verify the
+# 1:1 chain instead of trusting our sync discipline.
+#
+# GATE: workflow_dispatch ONLY — a publish is always an explicit human-ordered
+# trigger (same rule as the GitHub Packages mirror and the private hosting
+# deploys). The version published is whatever tracker/package.json carries at
+# the dispatched commit; npm's immutable-version rule rejects re-publishes.
+#
+# ONE-TIME npmjs SETUP (package settings -> Trusted Publisher):
+#   GitHub Actions · repo Deploy-Forward/Deploy-Forward · workflow publish-npm.yml
+name: publish-npm
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # the OIDC token npm's trusted publishing exchanges
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      # Trusted publishing needs npm >= 11.5 (OIDC exchange); Node 22 bundles npm 10.
+      - run: npm install -g npm@latest
+      - name: Install and publish with provenance
+        working-directory: tracker
+        run: |
+          npm ci --no-audit --no-fund
+          npm publish --provenance --access public
