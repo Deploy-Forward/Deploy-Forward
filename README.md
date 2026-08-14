@@ -149,6 +149,18 @@ The CI in this repo runs the same commands plus two guards: the transcript tripw
 (`scripts/check-no-transcripts.mjs` — no real usage data can ever enter this tree)
 and usage-core sync parity.
 
+## Registries
+
+npmjs is the front door: `npx --yes deploy-forward@latest`. The same package is
+mirror-published to GitHub Packages as `@deploy-forward/deploy-forward`
+(owner-scoped, as that registry requires). GitHub Packages needs a token with
+`read:packages` even for public installs — if you want it anyway:
+
+```sh
+echo "@deploy-forward:registry=https://npm.pkg.github.com" >> ~/.npmrc
+npm install @deploy-forward/deploy-forward
+```
+
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) (DCO, tests, the adapter contract). Security

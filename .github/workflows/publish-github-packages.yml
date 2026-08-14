@@ -1,0 +1,45 @@
+# Mirror-publish the tracker to the GitHub Packages npm registry.
+#
+# npmjs.com stays the PRIMARY registry (unscoped `deploy-forward`, human OTP
+# publish). This workflow publishes the SAME tarball content to GitHub Packages
+# as `@deploy-forward/deploy-forward` — the registry requires owner-scoped names,
+# and public reads there still need a token (GitHub's rule, not ours), which is
+# why it is the mirror and not the front door.
+#
+# Zero stored secrets, same posture as CI: the ambient GITHUB_TOKEN with
+# packages:write is the only credential, valid just for this repo's packages.
+#
+# GATE: workflow_dispatch ONLY — a publish is always an explicit human-ordered
+# trigger, never a side effect of a push (the same rule as the private repo's
+# hosting deploys).
+name: publish-github-packages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '22'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@deploy-forward'
+      - name: Scope the package name for this registry
+        working-directory: tracker
+        # GitHub Packages requires @OWNER/name; npmjs keeps the unscoped name.
+        # The transform happens only inside this job — nothing is committed.
+        run: npm pkg set name='@deploy-forward/deploy-forward'
+      - name: Install and publish
+        working-directory: tracker
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm ci --no-audit --no-fund
+          npm publish
