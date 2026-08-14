@@ -9,6 +9,7 @@ this folder is hand-edited.
 | --- | --- |
 | [`observed.json`](./observed.json) | The always-current snapshot: every canonical model id with its canonical rate, the LiteLLM observation, the models.dev observation (native vendor only — reseller rows are excluded), fetch timestamps, and a per-row `agreement` label. |
 | [`history/`](./history/) | One dated snapshot per day, append-only — the time series as plain files. |
+| [`series.json`](./series.json) | Per-model canonical-rate CHANGE points (prices are step functions) — the compact price-over-time series the [rates page](https://deployforward.dev/rates/) charts. Recorded from first observation onward; never a retroactive backfill. |
 | [Commit history](https://github.com/Deploy-Forward/Deploy-Forward/commits/main/rates) | The same series as a ledger: each day's commit subject carries the date and agreement counts, and each diff shows exactly which rates moved. |
 
 ## How to read `agreement`

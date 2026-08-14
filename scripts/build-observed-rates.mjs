@@ -20,7 +20,7 @@
  * Run with tsx (the canonical table is TypeScript):
  *   cd tracker && node --import tsx ../scripts/build-observed-rates.mjs
  */
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, readFileSync, existsSync } from "node:fs";
 import { PRICING } from "../usage-core/src/pricing.ts";
 import { lookupCatalog } from "./check-price-drift.mjs";
 
@@ -137,6 +137,33 @@ async function main() {
   mkdirSync(new URL("../rates/history/", import.meta.url), { recursive: true });
   writeFileSync(new URL("../rates/observed.json", import.meta.url), json);
   writeFileSync(new URL(`../rates/history/${day}.json`, import.meta.url), json);
+  // rates/series.json — the price-over-time series the /rates/ page charts
+  // (x = time, y = $/MTok). Prices are STEP functions, so only change points are
+  // recorded: the first observation of an id, then a new point only when a
+  // canonical rate actually moves. Compact forever, one fetch for the whole
+  // chart, and honest by construction — the series begins at first observation,
+  // never a fabricated backfill.
+  const seriesPath = new URL("../rates/series.json", import.meta.url);
+  const series = existsSync(seriesPath)
+    ? JSON.parse(readFileSync(seriesPath, "utf8"))
+    : { note: "Per-model canonical-rate change points, USD/MTok. Recorded from first observation onward — no retroactive backfill.", models: {} };
+  for (const id of Object.keys(PRICING.models).sort()) {
+    const c = PRICING.models[id];
+    const point = { d: day, input: c.input, output: c.output, cacheRead: c.cacheRead, cacheCreation: c.cacheCreation };
+    const arr = (series.models[id] ??= []);
+    const last = arr[arr.length - 1];
+    const changed =
+      !last ||
+      last.input !== point.input ||
+      last.output !== point.output ||
+      last.cacheRead !== point.cacheRead ||
+      last.cacheCreation !== point.cacheCreation;
+    if (changed && (!last || last.d !== day)) arr.push(point);
+    else if (changed) arr[arr.length - 1] = point; // same-day correction: amend, don't double-step
+  }
+  series.updatedAt = now;
+  writeFileSync(seriesPath, JSON.stringify(series, null, 1) + "\n");
+
   const counts = {};
   for (const m of Object.values(models)) counts[m.agreement] = (counts[m.agreement] || 0) + 1;
   // Exactly one summary line, last — the workflow lifts it into the commit subject
