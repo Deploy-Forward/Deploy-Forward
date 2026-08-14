@@ -1,0 +1,46 @@
+# Daily price-drift watch: does usage-core's canonical table still match the world?
+#
+# Fetches LiteLLM's public catalog (no secrets; same aggregator the closed
+# service's daily feed reads) and diffs every priced id. Drift fails the run
+# and files/updates an issue, so a stale rate is loud within a day — the
+# claude-opus-5 lesson (3.3B tokens unpriced for weeks with nothing watching).
+# The check NEVER edits the table: a hit means verify at the vendor's own page,
+# then update usage-core/src via the documented procedure.
+name: price-drift
+
+on:
+  schedule:
+    - cron: '17 13 * * *' # daily, ~09:17 ET
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '22'
+      - name: Install tsx (the canonical table is TypeScript)
+        working-directory: tracker
+        run: npm ci --no-audit --no-fund
+      - name: Check drift
+        id: drift
+        working-directory: tracker
+        run: node --import tsx ../scripts/check-price-drift.mjs
+      - name: File or update the drift issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "Price drift detected in:title" --json number --jq '.[0].number')
+          body="The daily price-drift check failed: usage-core's canonical table disagrees with the LiteLLM catalog. See the run log for the exact ids and fields: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID — verify at the VENDOR's own pricing page, then update usage-core/src via the documented procedure (never trust the aggregator blindly)."
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "Price drift detected: usage-core vs the live catalog" --body "$body"
+          fi
