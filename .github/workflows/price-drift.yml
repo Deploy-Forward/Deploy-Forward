@@ -34,17 +34,21 @@ jobs:
       # consistently update ... posted to GitHub"). The canonical table itself
       # stays hand-verified; this artifact is source-attributed by construction.
       - name: Build observed rates (LiteLLM + models.dev)
+        id: rates
         working-directory: tracker
-        run: node --import tsx ../scripts/build-observed-rates.mjs
-      - name: Commit the daily artifact
+        run: |
+          SUMMARY=$(node --import tsx ../scripts/build-observed-rates.mjs | tail -1)
+          echo "summary=$SUMMARY" >> "$GITHUB_OUTPUT"
+          echo "$SUMMARY"
+      - name: Commit the daily snapshot (the rates time series)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/observed-rates.json
+          git add rates/
           if git diff --cached --quiet; then
             echo "observed rates unchanged today - no commit"
           else
-            git commit -m "data: daily observed-rates refresh (automated, source-attributed)"
+            git commit -m "rates: ${{ steps.rates.outputs.summary }}"
             git push
           fi
       - name: Check drift

@@ -129,12 +129,20 @@ async function main() {
     },
     models,
   };
-  mkdirSync(new URL("../data/", import.meta.url), { recursive: true });
-  writeFileSync(new URL("../data/observed-rates.json", import.meta.url), JSON.stringify(artifact, null, 2) + "\n");
+  // rates/observed.json is the always-current snapshot; rates/history/<day>.json is
+  // the append-only time series (Marco 2026-08-14: a browsable daily record of the
+  // model pricing we support — readable as files, not just git archaeology).
+  const day = now.slice(0, 10);
+  const json = JSON.stringify(artifact, null, 2) + "\n";
+  mkdirSync(new URL("../rates/history/", import.meta.url), { recursive: true });
+  writeFileSync(new URL("../rates/observed.json", import.meta.url), json);
+  writeFileSync(new URL(`../rates/history/${day}.json`, import.meta.url), json);
   const counts = {};
   for (const m of Object.values(models)) counts[m.agreement] = (counts[m.agreement] || 0) + 1;
+  // Exactly one summary line, last — the workflow lifts it into the commit subject
+  // so the rates/ commit log reads as a dated ledger.
   console.log(
-    `observed-rates.json: ${Object.keys(models).length} ids — ` +
+    `${day}: ${Object.keys(models).length} ids — ` +
       Object.entries(counts)
         .map(([k, v]) => `${k}: ${v}`)
         .join(", "),

@@ -164,12 +164,15 @@ npm install @deploy-forward/deploy-forward
 
 ## Live rates
 
-[`data/observed-rates.json`](./data/observed-rates.json) is rebuilt and committed
-daily by the price-drift workflow: every canonical rate observed against two
-independent public sources (LiteLLM, models.dev), with per-row agreement labels
-and fetch timestamps. The canonical table stays hand-verified against vendor
-pages; this artifact is the automated freshness layer on top — source-attributed
-by construction, never silently promoted.
+[`rates/`](./rates/) is the daily model-pricing time series: an always-current
+[`observed.json`](./rates/observed.json), one dated snapshot per day under
+[`rates/history/`](./rates/history/), and a
+[commit ledger](https://github.com/Deploy-Forward/Deploy-Forward/commits/main/rates)
+whose diffs show exactly which rates moved and when. Rebuilt and committed
+daily by the price-drift workflow from two independent public sources
+(LiteLLM, models.dev), agreement-labeled per row. The canonical table stays
+hand-verified against vendor pages; this folder is the automated observation
+layer — source-attributed by construction, never silently promoted.
 
 ## Contributing
 
