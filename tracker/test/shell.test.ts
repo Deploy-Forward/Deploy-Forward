@@ -350,9 +350,9 @@ test("shellStep: an unbound key in a given view is a no-op (never a stray quit o
 
 // D14 C7 (docs/d14-two-way-join-spec.md): an Org row joins the v1 groups, beside
 // Device -- read-only display of the org-join state (none / enrolled / pending).
-const SETTINGS_GROUPS = ["Board", "Providers", "Billing", "Limits", "Privacy", "Org", "Device"] as const;
+const SETTINGS_GROUPS = ["Board", "Providers", "Billing", "Limits", "Profile", "Privacy", "Org", "Device"] as const;
 
-test("settingsRows: exactly seven grouped rows, in the documented order (D17 v1 groups + D14 C7's Org row)", () => {
+test("settingsRows: exactly eight grouped rows, in the documented order (D17 v1 + Org + the Profile scope row, Marco 2026-08-14)", () => {
   const rows = SS.settingsRows(baseTrackerState());
   assert.deepEqual(rows.map((r) => r.name), [...SETTINGS_GROUPS]);
 });
@@ -535,4 +535,93 @@ test("NON_TTY_NOTE: bin/df.ts's legacy non-TTY path references the exported note
   const here = dirname(fileURLToPath(import.meta.url));
   const dfSource = readFileSync(join(here, "..", "bin", "df.ts"), "utf8");
   assert.match(dfSource, /NON_TTY_NOTE/, "the legacy non-TTY path must print the shared NON_TTY_NOTE, not a re-typed ad hoc string");
+});
+
+// ============================================================================================
+// F. The "/" command palette (Marco 2026-08-14): everything lives INSIDE the live
+//    watch — "/" opens a searchable Configuration overlay of the same launcher
+//    actions, Enter runs in-app exactly like the launcher (never exits), Esc closes.
+//    While the palette is open, typed characters are SEARCH TEXT — "q" must never
+//    quit from inside a text field.
+// ============================================================================================
+
+test("palette: '/' on the watch opens it empty; Esc closes it and the watch state survives", () => {
+  const start = { ...SS.initialShellState(), menuIndex: 3, chartView: "spend" as const };
+  const open = SS.shellStep(start, "slash");
+  assert.equal(open.view, "palette");
+  assert.equal(open.palQuery, "");
+  assert.equal(open.palIndex, 0);
+  const closed = SS.shellStep(open, "esc");
+  assert.equal(closed.view, "watch");
+  assert.equal(closed.menuIndex, 3, "watch selection untouched by a palette round-trip");
+  assert.equal(closed.chartView, "spend");
+});
+
+test("palette: typed characters build the query — including 'q', which is TEXT here, never quit", () => {
+  let s = SS.shellStep(SS.initialShellState(), "slash");
+  for (const c of ["u", "s", "a", "g", "e", " ", "-", "-", "q"]) s = SS.shellStep(s, "char", c);
+  assert.equal(s.palQuery, "usage --q");
+  assert.equal(s.quit, false, "q typed into the search field must not quit the app");
+  const backspaced = SS.shellStep(s, "backspace");
+  assert.equal(backspaced.palQuery, "usage --");
+});
+
+test("filterSuperStartActions: case-insensitive substring over label+hint; empty query -> everything", () => {
+  assert.equal(SS.filterSuperStartActions("").length, SS.SUPER_START_ACTIONS.length);
+  const day = SS.filterSuperStartActions("BY-DAY");
+  assert.ok(day.some((a) => a.label === "usage --by-day"));
+  assert.ok(day.every((a) => (a.label + a.hint).toLowerCase().includes("by-day")));
+  assert.equal(SS.filterSuperStartActions("zzz-no-such-command").length, 0);
+});
+
+test("palette: Enter runs the FILTERED selection in-app (pendingAction) and returns to the watch", () => {
+  let s = SS.shellStep(SS.initialShellState(), "slash");
+  for (const c of "cost") s = SS.shellStep(s, "char", c);
+  const ran = SS.shellStep(s, "enter");
+  assert.equal(ran.view, "watch", "the palette closes; the pane machinery takes over");
+  assert.deepEqual(ran.pendingAction?.argv, ["usage", "--cost"]);
+});
+
+test("palette: the settings entry is the in-app view switch, exactly like the launcher", () => {
+  let s = SS.shellStep(SS.initialShellState(), "slash");
+  for (const c of "settings") s = SS.shellStep(s, "char", c);
+  const picked = SS.shellStep(s, "enter");
+  assert.equal(picked.view, "settings");
+  assert.equal(picked.pendingAction, null);
+});
+
+test("palette: up/down wrap over the FILTERED list, and the index clamps when the query narrows", () => {
+  let s = SS.shellStep(SS.initialShellState(), "slash");
+  const n = SS.filterSuperStartActions("").length;
+  s = SS.shellStep(s, "up");
+  assert.equal(s.palIndex, n - 1, "up from 0 wraps to the last filtered entry");
+  for (const c of "by-day") s = SS.shellStep(s, "char", c);
+  const m = SS.filterSuperStartActions("by-day").length;
+  assert.ok(s.palIndex < m, "narrowing the query clamps the index into the filtered range");
+});
+
+// ============================================================================================
+// G. Profile scope toggle (Marco 2026-08-14): Settings gains a "Profile" row that
+//    flips the WATCH's hero figures between this-device and account-aggregated
+//    numbers (still tracking this device either way — display scope only).
+// ============================================================================================
+
+test("settingsRows: a toggleable Profile row states the stats scope; device is the default", () => {
+  const rows = SS.settingsRows(baseTrackerState());
+  const profile = rows.find((r) => r.name === "Profile");
+  assert.ok(profile, "the Profile row exists");
+  assert.equal(profile!.toggleable, true);
+  assert.match(profile!.value, /this device/);
+  const account = SS.settingsRows(baseTrackerState({ profileScope: "account" }));
+  assert.match(account.find((r) => r.name === "Profile")!.value, /account/);
+});
+
+test("toggleSettingsRow('Profile') flips device <-> account, immutably, touching nothing else", () => {
+  const start = baseTrackerState();
+  const on = SS.toggleSettingsRow(start, "Profile");
+  assert.equal(on.profileScope, "account");
+  assert.equal(start.profileScope, undefined, "immutably");
+  const off = SS.toggleSettingsRow(on, "Profile");
+  assert.equal(off.profileScope, "device");
+  assert.equal(on.redact, off.redact, "no other field moves");
 });

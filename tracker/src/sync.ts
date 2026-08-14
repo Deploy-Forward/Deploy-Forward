@@ -50,7 +50,7 @@ import type { SessionDaySlice, SessionSummary, ToolName, TokenCounts } from "./t
  * 0.12.0 shipped reporting "0.11.8": the update-check nagged every user to upgrade to the
  * build they were already running, and every session it ingested was stamped with the wrong
  * trackerVersion — the one field that exists for schema-drift triage. */
-export const TRACKER_VERSION = "0.25.2";
+export const TRACKER_VERSION = "0.26.0";
 
 /**
  * Every Claude Code "projects" root we've seen across install layouts. An explicit

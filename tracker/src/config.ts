@@ -310,6 +310,12 @@ export interface TrackerState {
    */
   redact?: boolean;
   /**
+   * Watch hero-figure scope (Marco 2026-08-14): "device" (default, this machine's
+   * corpus) or "account" (the server's aggregate across every paired device —
+   * display scope only; this device keeps tracking either way). Absence = device.
+   */
+  profileScope?: "device" | "account";
+  /**
    * D20 ruling (docs/context-capacity-plan.md Phase 8): three-way plan-type enrollment
    * truth, declared at onboarding and editable in settings. Replaces the old boolean
    * subscription gate as the routing key for usage-view composition (the existing

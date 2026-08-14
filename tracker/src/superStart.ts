@@ -29,6 +29,7 @@ import type { SessionSummary, SessionContext } from "./types.js";
 import { windowForSession } from "./contextWindows.js";
 import { fetchClaudeLimits, resolveLimitsConsent, claudeCredentialsPath, limitsCliFlag } from "./limitsFetch.js";
 export { resolveLimitsConsent, claudeCredentialsPath, limitsCliFlag };
+import { fetchAccountStats } from "./profileStats.js";
 import { staleVersionBanner } from "./update.js";
 // homedir/join left with claudeCredentialsPath when it moved to limitsFetch.ts.
 // basename is deliberately NOT imported here: the one place this file needed it
@@ -1155,6 +1156,10 @@ export interface LiveInfo {
   scanAgoS: number;
   nextInS: number;
   scanning?: boolean;
+  /** Account-aggregated hero figures (Settings "Profile" scope = account) — fetched
+   * from /api/profile/stats across every paired device. Absent = device scope, or
+   * the fetch hasn't landed / failed (the hero then stays honestly device-scoped). */
+  accountStats?: { totalTokens: number; spendUsd: number; spendIsPartial: boolean; sessions: number; activeHours: number };
   /** True when this watch ALSO submits to the board (paired device, Marco 2026-07-16):
    * the footer then says "synced", and only then — an unpaired watch never claims a
    * push it didn't make. */
@@ -1238,16 +1243,23 @@ export function composeScreen(data: ShowcaseData, size: ScreenSize, p: number, l
   //    Tall terminals get the block-digit form (labels above, exact figures beneath);
   //    short ones keep single lines (the chart's minimum height wins the space fight).
   //    A sub-dollar spend skips the big band — "0.0063" in block digits is noise.
+  // Profile scope (Marco 2026-08-14): account-aggregated hero figures when the
+  // Settings toggle says so — display scope only, this device keeps tracking.
+  // Fail-soft: until the account fetch lands, device figures + device note.
+  const acct = live?.accountStats ?? null;
+  const heroTokenTotal = acct ? acct.totalTokens : data.tokenTotal;
+  const heroSpendUsd = acct ? acct.spendUsd : data.spendTotalUsd;
+  const heroSpendPartial = acct ? acct.spendIsPartial : data.spendIsPartial;
   const heroEase = easeOutCubic(phase(p, 0.15, 0.65));
-  const odometer = Math.round(data.tokenTotal * heroEase);
-  const animSpend = data.spendTotalUsd !== null ? data.spendTotalUsd * heroEase : null;
-  const showBigSpend = data.spendTotalUsd !== null && data.spendTotalUsd >= 1;
+  const odometer = Math.round(heroTokenTotal * heroEase);
+  const animSpend = heroSpendUsd !== null ? heroSpendUsd * heroEase : null;
+  const showBigSpend = heroSpendUsd !== null && heroSpendUsd >= 1;
   // The hero is TWO aligned columns (Marco 2026-07-16, "organize these components
   // better"): everything about tokens sits in column A, everything about spend in
   // column B — exact figure, then its own delta — with one dim scope line under both.
   const spendExact =
-    animSpend !== null ? moneyExact(animSpend, p >= 1 && data.spendIsPartial) : null; // the "+" floor mark only once settled — a racing floor reads as done
-  const wA = bigDigitLines(formatCompact(data.tokenTotal))[0].length;
+    animSpend !== null ? moneyExact(animSpend, p >= 1 && heroSpendPartial) : null; // the "+" floor mark only once settled — a racing floor reads as done
+  const wA = bigDigitLines(formatCompact(heroTokenTotal))[0].length;
   const colBx = 2 + wA + 6; // column B's x — the block bands' own geometry
   const padTo = (segs: Seg[], x: number): Seg[] => {
     const len = segs.reduce((s, e) => s + e.t.length, 0);
@@ -1264,12 +1276,17 @@ export function composeScreen(data: ShowcaseData, size: ScreenSize, p: number, l
         ...padTo([{ t: "  ▲ ", c: ui.c.ok }, { t: `+${formatCompact(dTok)} tok`, c: ui.c.ok }], colBx),
         ...(dSpendUsd !== null ? [{ t: "▲ ", c: ui.c.ok }, { t: `+${formatCostUsd(dSpendUsd)}`, c: ui.c.ok }] : []),
       ]
-    : [{ t: "  watching for new usage…", c: ui.c.dim }];
+    : [{ t: acct ? "  Usage on your account" : "  Usage on this machine", c: ui.c.bold }, { t: " · watching for new usage…", c: ui.c.dim }];
   const scopeRow: Seg[] = [
     { t: "  " },
-    { t: TOKENS_SCOPE_NOTE + (spendExact !== null ? " · spend est: public list prices, priced models only" : ""), c: ui.c.dim },
+    {
+      t:
+        (acct ? "your account · all devices · all time" : TOKENS_SCOPE_NOTE) +
+        (spendExact !== null ? " · spend est: public list prices, priced models only" : ""),
+      c: ui.c.dim,
+    },
   ];
-  const wB = showBigSpend ? bigDigitLines("$" + formatCompact(Math.round(data.spendTotalUsd!)))[0].length : 0;
+  const wB = showBigSpend ? bigDigitLines("$" + formatCompact(Math.round(heroSpendUsd!)))[0].length : 0;
   const bigMode = rows >= 32 && innerW >= wA + 6 + wB + 4;
   let odometerLines: Seg[][];
   if (bigMode) {
@@ -1382,7 +1399,7 @@ export function composeScreen(data: ShowcaseData, size: ScreenSize, p: number, l
             { t: `deploy-forward ${a.label}`, c: ui.c.bold },
             { t: `   ${a.hint}`, c: ui.c.dim },
           ];
-          const right = `↑↓ pick · ⏎ run · ${i + 1}/${SUPER_START_ACTIONS.length}`;
+          const right = `/ commands · ↑↓ pick · ⏎ run · ${i + 1}/${SUPER_START_ACTIONS.length}`;
           const used = left.reduce((s, e) => s + e.t.length, 0);
           return [...left, { t: " ".repeat(Math.max(1, innerW - 2 - used - right.length)) }, { t: right, c: ui.c.dim }, { t: "  " }];
         })()
@@ -1618,16 +1635,20 @@ export interface SuperStartAction {
  * raw-terminal vocabulary (whose bare-Esc-quits mapping stays locked). The view-aware
  * raw-to-ShellKey routing lives in runSuperStart's routeKey, so Esc/Backspace can mean
  * "back" inside the output/settings panes without touching the global watch contract. */
-export type ShellKey = "left" | "right" | "up" | "down" | "enter" | "esc" | "backspace" | "q";
+export type ShellKey = "left" | "right" | "up" | "down" | "enter" | "esc" | "backspace" | "q" | "slash" | "char";
 
 export interface ShellState {
-  view: "watch" | "output" | "settings";
+  view: "watch" | "output" | "settings" | "palette";
   menuIndex: number;
   chartView: "live" | "spend" | "limits";
   outputLines: string[];
   outputScroll: number;
   outputHeight: number;
   settingsIndex: number;
+  /** The "/" palette's live search query (view "palette" only). */
+  palQuery: string;
+  /** Selection index into filterSuperStartActions(palQuery). */
+  palIndex: number;
   quit: boolean;
   pendingAction: SuperStartAction | null;
 }
@@ -1641,9 +1662,20 @@ export function initialShellState(): ShellState {
     outputScroll: 0,
     outputHeight: 0,
     settingsIndex: 0,
+    palQuery: "",
+    palIndex: 0,
     quit: false,
     pendingAction: null,
   };
+}
+
+/** Case-insensitive substring filter over the launcher actions (label + hint).
+ * Empty query -> everything, in launcher order — the palette is the SAME command
+ * set as the ↑↓ launcher, searchable. */
+export function filterSuperStartActions(query: string): SuperStartAction[] {
+  const q = query.trim().toLowerCase();
+  if (q === "") return [...SUPER_START_ACTIONS];
+  return SUPER_START_ACTIONS.filter((a) => (a.label + " " + a.hint).toLowerCase().includes(q));
 }
 
 /**
@@ -1653,9 +1685,31 @@ export function initialShellState(): ShellState {
  * `q` (from any view) sets quit. Esc/Backspace navigate BACK from a pane; on the watch
  * they are a no-op here (the raw router keeps bare-Esc-quits at the watch level).
  */
-export function shellStep(state: ShellState, key: ShellKey): ShellState {
+export function shellStep(state: ShellState, key: ShellKey, ch?: string): ShellState {
+  // The palette is a TEXT FIELD: every printable key is query input there, so the
+  // global "q quits" contract is deliberately routed AROUND it (routeKey sends
+  // printables as "char" while the palette is open — "q" must never quit a search).
+  if (state.view === "palette") {
+    if (key === "esc") return { ...state, view: "watch", palQuery: "", palIndex: 0 };
+    if (key === "char" && ch) return { ...state, palQuery: state.palQuery + ch, palIndex: 0 };
+    if (key === "backspace") return { ...state, palQuery: state.palQuery.slice(0, -1), palIndex: 0 };
+    const filtered = filterSuperStartActions(state.palQuery);
+    if (key === "up" || key === "down") {
+      const n = Math.max(1, filtered.length);
+      return { ...state, palIndex: (Math.min(state.palIndex, n - 1) + (key === "down" ? 1 : -1) + n) % n };
+    }
+    if (key === "enter") {
+      const action = filtered[Math.min(state.palIndex, Math.max(0, filtered.length - 1))];
+      if (!action) return state;
+      const closed = { ...state, view: "watch" as const, palQuery: "", palIndex: 0 };
+      if (action.argv[0] === "settings") return { ...closed, view: "settings" };
+      return { ...closed, pendingAction: action };
+    }
+    return state;
+  }
   if (key === "q") return { ...state, quit: true };
   if (state.view === "watch") {
+    if (key === "slash") return { ...state, view: "palette", palQuery: "", palIndex: 0 };
     if (key === "up" || key === "down") {
       const n = SUPER_START_ACTIONS.length;
       return { ...state, menuIndex: (state.menuIndex + (key === "down" ? 1 : -1) + n) % n };
@@ -1778,6 +1832,14 @@ export function settingsRows(state: TrackerState, now: number = Date.now()): Set
   }
   rows.push(
     { name: "Limits", value: claudeOn ? "claude usage lanes: on" : "claude usage lanes: off", toggleable: true },
+    // Marco 2026-08-14: display scope for the watch's hero figures — this device's
+    // corpus, or the account aggregate across every paired device. Tracking is
+    // unaffected either way; this only changes what the big numbers show.
+    {
+      name: "Profile",
+      value: state.profileScope === "account" ? "stats scope: account (all devices)" : "stats scope: this device",
+      toggleable: true,
+    },
     { name: "Privacy", value: redactOn ? "redact thread labels: on" : "redact thread labels: off", toggleable: true },
     // D14 C7: an Org row beside Device -- read-only display (the alt-screen launcher
     // spawns commands with no stdin, so entering an invite code/slug interactively
@@ -1808,6 +1870,9 @@ export function toggleSettingsRow(state: TrackerState, rowName: string): Tracker
   }
   if (rowName === "Privacy") {
     return { ...state, redact: !(state.redact ?? false) };
+  }
+  if (rowName === "Profile") {
+    return { ...state, profileScope: state.profileScope === "account" ? "device" : "account" };
   }
   return state;
 }
@@ -1900,6 +1965,37 @@ export function composeSettingsPane(shell: ShellState, trackerState: TrackerStat
   plain.push("  up/down pick | enter toggle | esc back to the watch | q quit");
   const padded = padFrame(plain, size);
   return padded.map((l, i) => (i === 1 ? ui.c.bold(l) : i === 2 ? ui.c.dim(l) : selLines.includes(i) ? ui.c.bold(l) : l));
+}
+
+/** The "/" palette pane: Configuration — the launcher's command set, searchable.
+ * Same visual grammar as the settings pane (title, rule, marked selection, hint
+ * footer); the query line renders a live cursor block so it reads as a text field. */
+export function composePalettePane(shell: ShellState, size: { rows: number; cols: number }): string[] {
+  const filtered = filterSuperStartActions(shell.palQuery);
+  const sel = filtered.length === 0 ? -1 : Math.min(shell.palIndex, filtered.length - 1);
+  const labelW = Math.max(...SUPER_START_ACTIONS.map((a) => a.label.length)) + 2;
+  const plain: string[] = [
+    "",
+    "  CONFIGURATION",
+    "  " + "-".repeat(Math.max(8, Math.min(60, size.cols - 4))),
+    `  / ${shell.palQuery}▌`,
+    "",
+  ];
+  const selLines: number[] = [];
+  if (filtered.length === 0) {
+    plain.push("  no matching command — backspace to widen the search");
+  }
+  filtered.forEach((a, i) => {
+    if (i === sel) selLines.push(plain.length);
+    const marker = i === sel ? "> " : "  ";
+    plain.push(`  ${marker}${a.label.padEnd(labelW)}${a.hint}`);
+  });
+  plain.push("");
+  plain.push("  type to search | up/down pick | enter run in-app | esc back to the watch");
+  const padded = padFrame(plain, size);
+  return padded.map((l, i) =>
+    i === 1 ? ui.c.bold(l) : i === 2 ? ui.c.dim(l) : selLines.includes(i) ? ui.c.bold(l) : i === padded.length - 1 ? l : l,
+  );
 }
 
 /** Opens a URL with the platform opener, detached - the shell stays resident (D16's
@@ -2418,7 +2514,17 @@ export async function runSuperStart(opts: SuperStartOptions = {}, io: ShowcaseIO
     if (s === "\x1b[A" || s === "\x1bOA") return "up";
     if (s === "\x1b[B" || s === "\x1bOB") return "down";
     if (s === "\r" || s === "\n") return "enter";
-    if (s === "q" || s === "Q" || s === "\x03") return "quit";
+    if (s === "\x03") return "quit"; // Ctrl-C quits from ANY view, text field included
+    // The palette is a text field: printable characters are SEARCH INPUT there —
+    // including q and / — so its routing comes before the global quit mapping.
+    if (shell.view === "palette") {
+      if (s === "\x1b") return "esc";
+      if (s === "\x7f" || s === "\x08") return "backspace";
+      if (s.length === 1 && s >= " " && s !== "\x7f") return `char:${s}`;
+      return null;
+    }
+    if (s === "/") return shell.view === "watch" ? "slash" : null;
+    if (s === "q" || s === "Q") return "quit";
     if (s === "\x1b") return shell.view === "watch" ? "quit" : "esc";
     if (s === "\x7f" || s === "\x08") return "backspace";
     return null;
@@ -2562,7 +2668,7 @@ export async function runSuperStart(opts: SuperStartOptions = {}, io: ShowcaseIO
     // D16 view mux: the watch keeps its painter untouched; the output/settings panes
     // render full-frame padded lines. Crossing views clears once so no stale cells
     // survive the layout change; same-view repaints overwrite in place.
-    let paintedView: "watch" | "output" | "settings" = shell.view;
+    let paintedView: ShellState["view"] = shell.view;
     let paneTitle = "output";
     const paint = (): void => {
       const size = { rows: io.rows(), cols: io.cols() };
@@ -2576,6 +2682,10 @@ export async function runSuperStart(opts: SuperStartOptions = {}, io: ShowcaseIO
       }
       if (shell.view === "settings") {
         io.write("\x1b[H" + composeSettingsPane(shell, loadState(), size).map((l, i) => `\x1b[${i + 1};1H` + l).join(""));
+        return;
+      }
+      if (shell.view === "palette") {
+        io.write("\x1b[H" + composePalettePane(shell, size).map((l, i) => `\x1b[${i + 1};1H` + l).join(""));
         return;
       }
       paintWatch();
@@ -2684,6 +2794,25 @@ export async function runSuperStart(opts: SuperStartOptions = {}, io: ShowcaseIO
         });
       };
       maybeFetchLanes();
+      // Profile scope (Marco 2026-08-14): same fresh-read-every-beat discipline as
+      // the lanes consent — a Settings toggle applies on the next beat, no restart.
+      // fetchAccountStats carries its own 5-minute TTL, so calling per beat is cheap.
+      let accountStats: LiveInfo["accountStats"];
+      const statsFetch: typeof fetch = (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(3000) });
+      const maybeFetchAccountStats = (): void => {
+        if (loadState().profileScope !== "account") {
+          accountStats = undefined;
+          if (live) live = { ...live, accountStats: undefined };
+          return;
+        }
+        void fetchAccountStats(statsFetch).then((s) => {
+          // Re-check at landing time: a slow response racing a toggle-off must not
+          // resurrect account figures (same rule as the lanes fetch above).
+          if (loadState().profileScope !== "account") return;
+          accountStats = s ?? undefined;
+        });
+      };
+      maybeFetchAccountStats();
       // Page-entry clock: limits bars ease-fill over ~600ms after an arrow press.
       let pageSwitchedAt = Date.now();
       // Chart view: auto until the user touches an arrow, then pinned to their choice
@@ -2708,6 +2837,12 @@ export async function runSuperStart(opts: SuperStartOptions = {}, io: ShowcaseIO
         });
       };
       ctx.onKey((k) => {
+        // Palette text input rides as "char:<c>" tokens; everything else is a bare ShellKey.
+        if (k.startsWith("char:")) {
+          shell = shellStep(shell, "char", k.slice(5));
+          paint();
+          return;
+        }
         const key = k as ShellKey; // routeKey emits only ShellKey tokens ("quit" never reaches handlers)
         if (shell.view === "settings" && (key === "up" || key === "down" || key === "enter")) {
           const r = settingsStep(shell, key, { trackerState: loadState(), persist: saveState });
@@ -2716,6 +2851,7 @@ export async function runSuperStart(opts: SuperStartOptions = {}, io: ShowcaseIO
           // beat -- an "enter" that just persisted a consent flip must clear (or start
           // fetching) before the very next paint, never one stale frame behind it.
           maybeFetchLanes();
+          maybeFetchAccountStats();
           paint();
           return;
         }
@@ -2860,9 +2996,10 @@ export async function runSuperStart(opts: SuperStartOptions = {}, io: ShowcaseIO
           if (scanDue(now, corpusChangedAt, lastScanAt) || now - lastScanAt >= REFRESH_MS) startScan();
         }
         maybeFetchLanes();
+        maybeFetchAccountStats();
 
         live = scan.inFlight
-          ? { scanAgoS: Math.round((Date.now() - scan.startedAt) / 1000), nextInS: 0, scanning: true, pushing, note, delta: live?.delta, activeHarnesses: probe.activeHarnesses, sessions: liveSessions, chartView: resolveView(), menuIndex: shell.menuIndex, beat, claudeLanes, claudeNote, pageP: Math.min(1, (Date.now() - pageSwitchedAt) / 600), redact: opts.redact, billingMode, budget: budgetFor(current.spendTotalUsd), updateBanner }
+          ? { scanAgoS: Math.round((Date.now() - scan.startedAt) / 1000), nextInS: 0, scanning: true, pushing, note, delta: live?.delta, activeHarnesses: probe.activeHarnesses, sessions: liveSessions, chartView: resolveView(), menuIndex: shell.menuIndex, beat, claudeLanes, claudeNote, accountStats, pageP: Math.min(1, (Date.now() - pageSwitchedAt) / 600), redact: opts.redact, billingMode, budget: budgetFor(current.spendTotalUsd), updateBanner }
           : {
               scanAgoS: Math.round((Date.now() - lastScanAt) / 1000),
               nextInS: Math.max(0, Math.round((REFRESH_MS - (Date.now() - lastScanAt)) / 1000)),
@@ -2876,6 +3013,7 @@ export async function runSuperStart(opts: SuperStartOptions = {}, io: ShowcaseIO
               beat,
               claudeLanes,
               claudeNote,
+              accountStats,
               pageP: Math.min(1, (Date.now() - pageSwitchedAt) / 600),
               redact: opts.redact,
               billingMode,
