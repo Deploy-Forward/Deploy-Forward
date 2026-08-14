@@ -57,8 +57,28 @@ test("composeLimitLanes: codex + grok lanes clamp percents into [0,100]", () => 
       grokCredits: { percent: -3, periodType: null, periodStart: null, periodEnd: null, tier: null, ts: 0 },
     }),
   );
-  assert.equal(lanes.find((l) => l.label === "Codex primary")!.percent, 100);
+  assert.equal(lanes.find((l) => l.label.startsWith("Codex"))!.percent, 100);
   assert.equal(lanes.find((l) => l.label === "Grok credits")!.percent, 0);
+});
+
+test("composeLimitLanes: Codex lanes are labeled by what the window IS, not primary/secondary", () => {
+  // Marco 2026-08-14 ("we also want to serve 5-hour"): Codex's snapshots currently
+  // report ONLY the weekly window (primary 10080m, secondary null — corpus-verified),
+  // so a 5h lane cannot honestly exist today. What we CAN do: name lanes by their
+  // window, so the moment Codex re-reports a 5h window it appears as "Codex 5h"
+  // with zero code changes — and "168h window" stops hiding behind "primary".
+  const lanes = composeLimitLanes(
+    src({
+      codexLimits: {
+        primary: { usedPercent: 1, windowMinutes: 10080, resetsInSeconds: 147251 },
+        secondary: { usedPercent: 37, windowMinutes: 300, resetsInSeconds: 1800 },
+      },
+    }),
+  );
+  const labels = lanes.map((l) => l.label);
+  assert.ok(labels.includes("Codex weekly"), `weekly window labeled as such, got: ${labels.join(", ")}`);
+  assert.ok(labels.includes("Codex 5h"), `5h window labeled as such, got: ${labels.join(", ")}`);
+  assert.ok(!labels.some((l) => l.includes("primary") || l.includes("secondary")), "vendor jargon never reaches the user");
 });
 
 test("limitLaneTextLines: percent lanes render a real bar + detail; estimate lanes render text only", () => {

@@ -60,22 +60,25 @@ function resetClock(iso: string): string | null {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+/** Name a Codex window by what it IS, never by vendor slot ("primary"/"secondary"):
+ * Codex's snapshots currently report ONLY the weekly window (primary 10080m,
+ * secondary null — corpus-verified 2026-08-14), so the moment a 5h window
+ * reappears in the data it self-labels correctly with no code change. */
+function codexWindowLabel(windowMinutes: number): string {
+  if (windowMinutes === 300) return "Codex 5h";
+  if (windowMinutes === 10_080) return "Codex weekly";
+  return `Codex ${Math.round(windowMinutes / 60)}h`;
+}
+
 export function composeLimitLanes(src: LimitLaneSource): LimitLane[] {
   const lanes: LimitLane[] = [];
   const cx = src.codexLimits;
-  if (cx?.primary) {
+  for (const w of [cx?.primary, cx?.secondary]) {
+    if (!w) continue;
     lanes.push({
-      label: "Codex primary",
-      percent: clamp(cx.primary.usedPercent),
-      detail: `${cx.primary.usedPercent}% of ${Math.round(cx.primary.windowMinutes / 60)}h window`,
-      estimate: false,
-    });
-  }
-  if (cx?.secondary) {
-    lanes.push({
-      label: "Codex secondary",
-      percent: clamp(cx.secondary.usedPercent),
-      detail: `${cx.secondary.usedPercent}% of ${Math.round(cx.secondary.windowMinutes / 60)}h window`,
+      label: codexWindowLabel(w.windowMinutes),
+      percent: clamp(w.usedPercent),
+      detail: `${w.usedPercent}% of ${Math.round(w.windowMinutes / 60)}h window`,
       estimate: false,
     });
   }

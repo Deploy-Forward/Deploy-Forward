@@ -66,6 +66,11 @@ export const PRICING: PricingTable = {
     "claude-fable-5": { input: 10.0, output: 50.0, cacheRead: 1.0, cacheCreation: 12.5 },
     // VERIFY: anthropic.com/pricing
     "claude-mythos-5": { input: 10.0, output: 50.0, cacheRead: 1.0, cacheCreation: 12.5 },
+    // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-14:
+    // $5 / $25, cache read $0.50, 5m cache write $6.25 — same row as Opus 4.8. Was the
+    // largest unpriced id on real corpora (3.3B tokens excluded from usage --cost while
+    // the Board priced it via its feed overlay — the spend-misalignment driver).
+    "claude-opus-5": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreation: 6.25 },
     // VERIFY: anthropic.com/pricing
     "claude-opus-4-8": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreation: 6.25 },
     // VERIFY: anthropic.com/pricing
@@ -74,9 +79,11 @@ export const PRICING: PricingTable = {
     "claude-opus-4-6": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreation: 6.25 },
     // VERIFY: anthropic.com/pricing
     "claude-opus-4-5": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreation: 6.25 },
-    // Sonnet 5 INTRODUCTORY rate, verified verbatim at platform.claude.com/docs pricing
-    // 2026-07-10: $2/$10 ($0.20 cache read, $2.50 5m write) through 2026-08-31, then
-    // 3/15/0.3/3.75 — REPRICE ON 2026-09-01 (edit HERE, sync, and mirror web's data).
+    // Sonnet 5: $2/$10 ($0.20 cache read, $2.50 5m write) is now the PERMANENT rate —
+    // platform.claude.com/docs pricing 2026-08-14, verbatim: "the previously scheduled
+    // increase to $3/$15 per million input/output tokens on September 1, 2026 will not
+    // occur." The Sept-1 reprice instruction that used to live here is CANCELLED; do
+    // not execute it.
     "claude-sonnet-5": { input: 2.0, output: 10.0, cacheRead: 0.2, cacheCreation: 2.5 },
     // VERIFY: anthropic.com/pricing
     "claude-sonnet-4-6": { input: 3.0, output: 15.0, cacheRead: 0.3, cacheCreation: 3.75 },

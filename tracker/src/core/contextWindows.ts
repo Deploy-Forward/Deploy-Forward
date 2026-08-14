@@ -55,6 +55,12 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   // VERIFY-family: absent from the LiteLLM catalog entirely (2026-07-17 fetch) -- no
   // vendor entry exists to check against. Typed from the family's known base window.
   "claude-mythos-5": 200_000,
+  // Vendor-sourced 2026-08-14 (same platform.claude.com read as its price row):
+  // Claude 4.6+ "include the full 1M token context window at standard pricing";
+  // kept at the 200,000 family base for the SAME reason as claude-opus-4-8 below
+  // (THE [1m] RULE above — the base window is what sessions actually run unless
+  // the [1m] variant is explicitly engaged).
+  "claude-opus-5": 200_000,
   // VERIFY-family: catalog lists max_input_tokens 1,000,000 for the plain
   // "claude-opus-4-8" key (2026-07-17 fetch); kept at 200,000 -- the value
   // tracker's contextWindows.test.ts pins directly. See THE [1m] RULE above.

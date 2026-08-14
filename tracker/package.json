@@ -1,6 +1,6 @@
 {
   "name": "deploy-forward",
-  "version": "0.25.1",
+  "version": "0.25.2",
   "description": "Deploy Forward tracker \u2014 ranks agentic engineers on what they ship. Measures your AI build time, tokens and outcomes locally (Claude Code; Codex next). Metadata only; never your code or prompts.",
   "license": "MIT",
   "type": "module",
