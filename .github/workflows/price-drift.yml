@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write # the daily observed-rates.json commit
   issues: write
 
 jobs:
@@ -28,6 +28,25 @@ jobs:
       - name: Install tsx (the canonical table is TypeScript)
         working-directory: tracker
         run: npm ci --no-audit --no-fund
+      # The fully-automated layer: rebuild the multi-source observed-rates artifact
+      # and commit it when it changed — BEFORE the drift gate, so a red drift day
+      # still publishes fresh observations (Marco 2026-08-14: "the table should
+      # consistently update ... posted to GitHub"). The canonical table itself
+      # stays hand-verified; this artifact is source-attributed by construction.
+      - name: Build observed rates (LiteLLM + models.dev)
+        working-directory: tracker
+        run: node --import tsx ../scripts/build-observed-rates.mjs
+      - name: Commit the daily artifact
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/observed-rates.json
+          if git diff --cached --quiet; then
+            echo "observed rates unchanged today - no commit"
+          else
+            git commit -m "data: daily observed-rates refresh (automated, source-attributed)"
+            git push
+          fi
       - name: Check drift
         id: drift
         working-directory: tracker
