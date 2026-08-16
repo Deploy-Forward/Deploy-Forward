@@ -102,8 +102,21 @@ export const PRICING: PricingTable = {
     "kimi-k2": { input: 0.6, output: 2.5, cacheRead: 0.15, cacheCreation: 0.6, note: "VERIFY" },
     "glm-4.6": { input: 0.6, output: 2.2, cacheRead: 0.11, cacheCreation: 0.6, note: "VERIFY" },
     "gpt-5": { input: 1.25, output: 10.0, cacheRead: 0.125, cacheCreation: 1.25, note: "VERIFY" },
-    "gpt-5.4": { input: 2.5, output: 15.0, cacheRead: 0.25, cacheCreation: 2.5, note: "VERIFY" },
-    "gpt-5.4-mini": { input: 0.75, output: 4.5, cacheRead: 0.075, cacheCreation: 0.75, note: "VERIFY" },
+    "gpt-5.4": { input: 2.5, output: 15.0, cacheRead: 0.25, cacheCreation: 2.5, note: "developers.openai.com/api/docs/pricing 2026-08-15 (<272K context tier); no separate cache-write charge, cacheCreation = input" },
+    "gpt-5.4-mini": { input: 0.75, output: 4.5, cacheRead: 0.075, cacheCreation: 0.75, note: "developers.openai.com/api/docs/pricing 2026-08-15; no separate cache-write charge, cacheCreation = input" },
+
+    // OpenAI gpt-5.6 family: developers.openai.com/api/docs/pricing 2026-08-15,
+    // cross-confirmed by models.dev the same day (exact agreement on all three tiers).
+    // Rates are the SHORT-context tier (<272K prompt); the long-context tier (sol
+    // 10/1/45, terra 4/0.4/18, luna 0.4/0.04/1.8) is NOT modeled — same policy as
+    // grok-4.6's long-context tier. OpenAI bills cache writes as ordinary input, so
+    // cacheCreation = input. Bare "gpt-5.6" is models.dev's alias at sol's rates,
+    // kept so a harness that logs the bare id prices identically to sol.
+    "gpt-5.6": { input: 5.0, output: 30.0, cacheRead: 0.5, cacheCreation: 5.0, note: "developers.openai.com/api/docs/pricing 2026-08-15; alias of gpt-5.6-sol per models.dev; long-context (>=272K) tier NOT modeled" },
+    "gpt-5.6-sol": { input: 5.0, output: 30.0, cacheRead: 0.5, cacheCreation: 5.0, note: "developers.openai.com/api/docs/pricing 2026-08-15; long-context (>=272K) tier 10/1/45 NOT modeled" },
+    "gpt-5.6-terra": { input: 2.0, output: 12.0, cacheRead: 0.2, cacheCreation: 2.0, note: "developers.openai.com/api/docs/pricing 2026-08-15; long-context (>=272K) tier 4/0.4/18 NOT modeled" },
+    "gpt-5.6-luna": { input: 0.2, output: 1.2, cacheRead: 0.02, cacheCreation: 0.2, note: "developers.openai.com/api/docs/pricing 2026-08-15; long-context (>=272K) tier 0.4/0.04/1.8 NOT modeled" },
+    "gpt-5.6-cyber": { input: 12.5, output: 75.0, cacheRead: 1.25, cacheCreation: 12.5, note: "developers.openai.com/api/docs/pricing 2026-08-15" },
     "gemini-3-flash": { input: 0.5, output: 3.0, cacheRead: 0.05, cacheCreation: 0.5, note: "VERIFY" },
     "gemini-3-pro": { input: 2.0, output: 12.0, cacheRead: 0.2, cacheCreation: 2.0, note: "VERIFY" },
 

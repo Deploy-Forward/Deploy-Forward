@@ -103,6 +103,13 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   "gpt-5.4": 1_050_000,
   // Catalog-sourced: max_input_tokens 1,050,000 (2026-07-17 fetch).
   "gpt-5.4-mini": 1_050_000,
+  // gpt-5.6 family: models.dev limit.context 1,050,000 for all variants (2026-08-15
+  // fetch; the vendor pricing page states only the 272K short/long tier threshold).
+  "gpt-5.6": 1_050_000,
+  "gpt-5.6-sol": 1_050_000,
+  "gpt-5.6-terra": 1_050_000,
+  "gpt-5.6-luna": 1_050_000,
+  "gpt-5.6-cyber": 1_050_000,
   // VERIFY-family: no exact "gemini-3-flash" key in the catalog (2026-07-17 fetch);
   // the "gemini-3-flash-preview" chat variant (1,048,576) is used as the family value.
   "gemini-3-flash": 1_048_576,
