@@ -207,7 +207,52 @@
     "cacheRead": 0.15,
     "cacheCreation": 0.6
    }
+  ],
+  "gpt-5.6": [
+   {
+    "d": "2026-08-16",
+    "input": 5,
+    "output": 30,
+    "cacheRead": 0.5,
+    "cacheCreation": 5
+   }
+  ],
+  "gpt-5.6-cyber": [
+   {
+    "d": "2026-08-16",
+    "input": 12.5,
+    "output": 75,
+    "cacheRead": 1.25,
+    "cacheCreation": 12.5
+   }
+  ],
+  "gpt-5.6-luna": [
+   {
+    "d": "2026-08-16",
+    "input": 0.2,
+    "output": 1.2,
+    "cacheRead": 0.02,
+    "cacheCreation": 0.2
+   }
+  ],
+  "gpt-5.6-sol": [
+   {
+    "d": "2026-08-16",
+    "input": 5,
+    "output": 30,
+    "cacheRead": 0.5,
+    "cacheCreation": 5
+   }
+  ],
+  "gpt-5.6-terra": [
+   {
+    "d": "2026-08-16",
+    "input": 2,
+    "output": 12,
+    "cacheRead": 0.2,
+    "cacheCreation": 2
+   }
   ]
  },
- "updatedAt": "2026-08-15T13:44:23.786Z"
+ "updatedAt": "2026-08-16T03:39:42.990Z"
 }
