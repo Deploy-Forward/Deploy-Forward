@@ -44,19 +44,19 @@ Thirty seconds, no trust in this document required:
 ```sh
 # 1. The registry's signature + provenance check (npm >= 9.5):
 mkdir df-verify && cd df-verify && npm init -y > /dev/null
-npm install deploy-forward@0.26.1 --ignore-scripts
+npm install deploy-forward@0.26.2 --ignore-scripts
 npm audit signatures
 #    Expect: "1 package has a verified registry signature"
 #            "1 package has a verified attestation"
 
 # 2. The attestation itself — which commit, which workflow run:
-npm view deploy-forward@0.26.1 dist.attestations
+npm view deploy-forward@0.26.2 dist.attestations
 #    Then inspect it rendered: the "Provenance" section on
 #    https://www.npmjs.com/package/deploy-forward links the exact
 #    GitHub Actions run and source commit.
 
 # 3. What is actually in the tarball (the files allowlist is pinned by test):
-npm pack deploy-forward@0.26.1 --dry-run
+npm pack deploy-forward@0.26.2 --dry-run
 #    Expect: dist/, HOOKS.md, package.json, README, LICENSE — nothing else.
 ```
 
