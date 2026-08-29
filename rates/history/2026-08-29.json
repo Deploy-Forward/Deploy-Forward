@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-08-29T17:08:57.973Z",
+  "generatedAt": "2026-08-29T17:24:20.626Z",
   "note": "Automated multi-source observation. The canonical table remains hand-verified against vendor pages; per-row `agreement` states how the sources relate. Never treat an aggregator value as vendor truth.",
   "canonicalTableVersion": 3,
   "sources": {
     "litellm": {
       "url": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
-      "fetchedAt": "2026-08-29T17:08:57.973Z"
+      "fetchedAt": "2026-08-29T17:24:20.626Z"
     },
     "modelsDev": {
       "url": "https://models.dev/api.json",
-      "fetchedAt": "2026-08-29T17:08:57.973Z"
+      "fetchedAt": "2026-08-29T17:24:20.626Z"
     }
   },
   "models": {
@@ -373,11 +373,11 @@
     },
     "gpt-5.6": {
       "canonical": {
-        "input": 5,
-        "output": 30,
-        "cacheRead": 0.5,
-        "cacheCreation": 5,
-        "note": "developers.openai.com/api/docs/pricing 2026-08-15; alias of gpt-5.6-sol per models.dev; long-context (>=272K) tier NOT modeled"
+        "input": 4,
+        "output": 20,
+        "cacheRead": 0.4,
+        "cacheCreation": 4,
+        "note": "developers.openai.com/api/docs/pricing 2026-08-29; alias of gpt-5.6-sol per models.dev; repriced 5/30/0.5 -> 4/20/0.4 (LiteLLM first 2026-08-23, models.dev 2026-08-25, vendor-verified 2026-08-29); promotional floor: vendor says available at least through 2026-11-21 — a later reversion is a reprice to observe, never pre-entered; long-context (>=272K) tier 8/0.8/30 NOT modeled"
       },
       "litellm": {
         "key": "gpt-5.6",
@@ -392,15 +392,15 @@
         "cacheRead": 0.4,
         "cacheCreation": 5
       },
-      "agreement": "drifts-from-canonical"
+      "agreement": "all-agree"
     },
     "gpt-5.6-cyber": {
       "canonical": {
         "input": 12.5,
         "output": 75,
         "cacheRead": 1.25,
-        "cacheCreation": 12.5,
-        "note": "developers.openai.com/api/docs/pricing 2026-08-15"
+        "cacheCreation": 15.625,
+        "note": "developers.openai.com/api/docs/pricing 2026-08-29; cache writes billed separately at 15.625 (1.25x input) — the one gpt-5.6 variant with a real cache-write charge"
       },
       "litellm": {
         "key": "gpt-5.6-cyber",
@@ -436,11 +436,11 @@
     },
     "gpt-5.6-sol": {
       "canonical": {
-        "input": 5,
-        "output": 30,
-        "cacheRead": 0.5,
-        "cacheCreation": 5,
-        "note": "developers.openai.com/api/docs/pricing 2026-08-15; long-context (>=272K) tier 10/1/45 NOT modeled"
+        "input": 4,
+        "output": 20,
+        "cacheRead": 0.4,
+        "cacheCreation": 4,
+        "note": "developers.openai.com/api/docs/pricing 2026-08-29; repriced 5/30/0.5 -> 4/20/0.4 (LiteLLM first 2026-08-23, models.dev 2026-08-25, vendor-verified 2026-08-29); promotional floor: vendor says available at least through 2026-11-21 — a later reversion is a reprice to observe, never pre-entered; long-context (>=272K) tier 8/0.8/30 NOT modeled"
       },
       "litellm": {
         "key": "gpt-5.6-sol",
@@ -455,7 +455,7 @@
         "cacheRead": 0.4,
         "cacheCreation": 5
       },
-      "agreement": "drifts-from-canonical"
+      "agreement": "all-agree"
     },
     "gpt-5.6-terra": {
       "canonical": {

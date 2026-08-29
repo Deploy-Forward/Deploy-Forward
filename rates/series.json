@@ -215,6 +215,13 @@
     "output": 30,
     "cacheRead": 0.5,
     "cacheCreation": 5
+   },
+   {
+    "d": "2026-08-29",
+    "input": 4,
+    "output": 20,
+    "cacheRead": 0.4,
+    "cacheCreation": 4
    }
   ],
   "gpt-5.6-cyber": [
@@ -224,6 +231,13 @@
     "output": 75,
     "cacheRead": 1.25,
     "cacheCreation": 12.5
+   },
+   {
+    "d": "2026-08-29",
+    "input": 12.5,
+    "output": 75,
+    "cacheRead": 1.25,
+    "cacheCreation": 15.625
    }
   ],
   "gpt-5.6-luna": [
@@ -242,6 +256,13 @@
     "output": 30,
     "cacheRead": 0.5,
     "cacheCreation": 5
+   },
+   {
+    "d": "2026-08-29",
+    "input": 4,
+    "output": 20,
+    "cacheRead": 0.4,
+    "cacheCreation": 4
    }
   ],
   "gpt-5.6-terra": [
@@ -254,5 +275,5 @@
    }
   ]
  },
- "updatedAt": "2026-08-29T17:08:57.973Z"
+ "updatedAt": "2026-08-29T17:24:20.626Z"
 }
