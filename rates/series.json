@@ -273,7 +273,25 @@
     "cacheRead": 0.2,
     "cacheCreation": 2
    }
+  ],
+  "claude-fable-5-1": [
+   {
+    "d": "2026-09-02",
+    "input": 10,
+    "output": 50,
+    "cacheRead": 0.25,
+    "cacheCreation": 12.5
+   }
+  ],
+  "claude-mythos-5-1": [
+   {
+    "d": "2026-09-02",
+    "input": 10,
+    "output": 50,
+    "cacheRead": 0.25,
+    "cacheCreation": 12.5
+   }
   ]
  },
- "updatedAt": "2026-09-02T17:10:38.047Z"
+ "updatedAt": "2026-09-02T23:45:04.808Z"
 }
