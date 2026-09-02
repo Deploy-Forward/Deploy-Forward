@@ -49,35 +49,41 @@ export interface PricingTable {
 }
 
 /**
- * VERIFY EVERY RATE against https://www.anthropic.com/pricing before relying on it.
- *
- * Sourced from the bundled claude-api skill catalog (cached 2026-06): input/output
- * are the published per-MTok rates; cacheRead and cacheCreation are derived from
- * Anthropic's documented multipliers — cache reads ~0.1x input, cache writes
- * ~1.25x input (5-minute TTL, the default). These multipliers and the 1h-TTL
- * (~2x) case are NOT separately confirmed per model — VERIFY.
+ * Anthropic rows: every current row below was verified VERBATIM against
+ * platform.claude.com/docs/en/about-claude/pricing on 2026-08-29 (input, output,
+ * cache-hit, and 5m cache-write columns). Multipliers per that page: 5m write 1.25x
+ * input, cache read 0.1x input — EXCEPT Fable 5.1 / Mythos 5.1, where cache reads
+ * are 0.025x ($0.25). The 1h-TTL write (2x) is NOT modeled anywhere in this table.
+ * Rebase ledger: 2026-08-29 (Marco: "rebase the price-tracking"), prior 2026-08-14.
  */
 export const PRICING: PricingTable = {
   version: 3,
   currency: "USD",
   per: 1_000_000,
   models: {
-    // VERIFY: anthropic.com/pricing
+    // Fable 5.1 / Mythos 5.1 (Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29): $10 / $50, 5m write $12.50, and a NEW cache-read
+    // multiplier — 0.025x = $0.25 (all other models 0.1x). These rows MUST exist
+    // explicitly: without them the suffix fallback resolved "claude-fable-5-1" to the
+    // Fable 5 row and priced cache reads at $1.00 — a silent 4x overstatement on the
+    // bucket that dominates agent sessions, shown as "priced" so nothing flagged it.
+    "claude-fable-5-1": { input: 10.0, output: 50.0, cacheRead: 0.25, cacheCreation: 12.5, note: "Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29; cache read 0.025x ($0.25), not the 0.1x family default" },
+    "claude-mythos-5-1": { input: 10.0, output: 50.0, cacheRead: 0.25, cacheCreation: 12.5, note: "Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29 (limited availability); cache read 0.025x ($0.25)" },
+    // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-fable-5": { input: 10.0, output: 50.0, cacheRead: 1.0, cacheCreation: 12.5 },
-    // VERIFY: anthropic.com/pricing
+    // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-mythos-5": { input: 10.0, output: 50.0, cacheRead: 1.0, cacheCreation: 12.5 },
     // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-14:
     // $5 / $25, cache read $0.50, 5m cache write $6.25 — same row as Opus 4.8. Was the
     // largest unpriced id on real corpora (3.3B tokens excluded from usage --cost while
     // the Board priced it via its feed overlay — the spend-misalignment driver).
     "claude-opus-5": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreation: 6.25 },
-    // VERIFY: anthropic.com/pricing
+    // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-opus-4-8": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreation: 6.25 },
-    // VERIFY: anthropic.com/pricing
+    // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-opus-4-7": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreation: 6.25 },
-    // VERIFY: anthropic.com/pricing
+    // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-opus-4-6": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreation: 6.25 },
-    // VERIFY: anthropic.com/pricing
+    // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-opus-4-5": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreation: 6.25 },
     // Sonnet 5: $2/$10 ($0.20 cache read, $2.50 5m write) is now the PERMANENT rate —
     // platform.claude.com/docs pricing 2026-08-14, verbatim: "the previously scheduled
@@ -85,11 +91,11 @@ export const PRICING: PricingTable = {
     // occur." The Sept-1 reprice instruction that used to live here is CANCELLED; do
     // not execute it.
     "claude-sonnet-5": { input: 2.0, output: 10.0, cacheRead: 0.2, cacheCreation: 2.5 },
-    // VERIFY: anthropic.com/pricing
+    // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-sonnet-4-6": { input: 3.0, output: 15.0, cacheRead: 0.3, cacheCreation: 3.75 },
-    // VERIFY: anthropic.com/pricing
+    // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-sonnet-4-5": { input: 3.0, output: 15.0, cacheRead: 0.3, cacheCreation: 3.75 },
-    // VERIFY: anthropic.com/pricing
+    // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-haiku-4-5": { input: 1.0, output: 5.0, cacheRead: 0.1, cacheCreation: 1.25 },
 
     // Observed non-Anthropic models (router-served ids reach ~/.claude via
@@ -130,7 +136,7 @@ export const PRICING: PricingTable = {
     // follows this table's stated convention (no separate cache-write billing ->
     // cacheCreation = input rate); web's original entries carried 0 there, inert in
     // practice because the grok adapter never emits cache-write tokens.
-    "grok-4.6": { input: 2.0, output: 6.0, cacheRead: 0.5, cacheCreation: 2.0, note: "docs.x.ai 2026-08-12; long-context (>=200K prompt) tier is 4/1/12 and NOT modeled" },
+    "grok-4.6": { input: 2.0, output: 6.0, cacheRead: 0.5, cacheCreation: 2.0, note: "docs.x.ai 2026-08-12, re-verified unchanged 2026-08-29 (2/6/0.5; models.dev agrees); long-context (>=200K prompt) tier 4/1/12 NOT modeled" },
     "grok-4.5": { input: 2.0, output: 6.0, cacheRead: 0.3, cacheCreation: 2.0, note: "docs.x.ai 2026-08-14 (cacheRead corrected 0.5->0.3 - the drift watch's first catch); long-context (>=200K) tier is higher and NOT modeled" },
     "grok-4.3": { input: 1.25, output: 2.5, cacheRead: 0.2, cacheCreation: 1.25, note: "docs.x.ai 2026-07-10; long-context (>200K) tier is higher and NOT modeled" },
     "grok-build-0.1": { input: 1.0, output: 2.0, cacheRead: 0.2, cacheCreation: 1.0, note: "docs.x.ai 2026-07-10" },

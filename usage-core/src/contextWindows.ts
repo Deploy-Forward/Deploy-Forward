@@ -52,6 +52,12 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   // "claude-fable-5" key (2026-07-17 fetch); kept at the documented 200,000 base --
   // see THE [1m] RULE above.
   "claude-fable-5": 200_000,
+  // Fable 5.1 / Mythos 5.1 (platform.claude.com pricing read 2026-08-29; models.dev and
+  // LiteLLM both list 1,000,000): kept at the 200,000 family base per THE [1m] RULE
+  // above -- 1,000,000 is reserved for ids carrying "[1m]". Explicit rows so the id
+  // never falls through the suffix rule to a sibling's entry.
+  "claude-fable-5-1": 200_000,
+  "claude-mythos-5-1": 200_000,
   // VERIFY-family: absent from the LiteLLM catalog entirely (2026-07-17 fetch) -- no
   // vendor entry exists to check against. Typed from the family's known base window.
   "claude-mythos-5": 200_000,

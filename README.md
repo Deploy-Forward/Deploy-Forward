@@ -37,8 +37,8 @@ No account, no network, loopback only. Pinned to an exact version on purpose: an
 exact version is what you can audit, and what the provenance attestation signs.
 
 ```sh
-npx --yes deploy-forward@0.26.2 usage    # per-model table, vendor limit lanes, api-equivalent spend
-npx --yes deploy-forward@0.26.2 serve    # the same view as a local web page at 127.0.0.1:4780
+npx --yes deploy-forward@0.26.3 usage    # per-model table, vendor limit lanes, api-equivalent spend
+npx --yes deploy-forward@0.26.3 serve    # the same view as a local web page at 127.0.0.1:4780
 ```
 
 `npx --yes deploy-forward@latest` is the convenience path — fine once you trust the
@@ -49,7 +49,7 @@ Both surfaces render the same fold and the same limit lanes from one shared seam
 they can never disagree.
 
 **Want the [Board](https://leaderboard.deployforward.dev)?** That is the optional
-step: run `npx --yes deploy-forward@0.26.2` bare and it will show you the capture
+step: run `npx --yes deploy-forward@0.26.3` bare and it will show you the capture
 contract, then **ask** whether to put this device's usage on the board — GitHub
 device-flow sign-in, hooks, and metadata sync happen only after that yes. Declining
 keeps everything local; `logout` and `uninstall` fully withdraw consent later.
