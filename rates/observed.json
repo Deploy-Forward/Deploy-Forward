@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-10T17:00:32.943Z",
+  "generatedAt": "2026-09-10T23:24:47.999Z",
   "note": "Automated multi-source observation. The canonical table remains hand-verified against vendor pages; per-row `agreement` states how the sources relate. Never treat an aggregator value as vendor truth.",
   "canonicalTableVersion": 3,
   "sources": {
     "litellm": {
       "url": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
-      "fetchedAt": "2026-09-10T17:00:32.943Z"
+      "fetchedAt": "2026-09-10T23:24:47.999Z"
     },
     "modelsDev": {
       "url": "https://models.dev/api.json",
-      "fetchedAt": "2026-09-10T17:00:32.943Z"
+      "fetchedAt": "2026-09-10T23:24:47.999Z"
     }
   },
   "models": {
@@ -517,6 +517,29 @@
         "output": 12,
         "cacheRead": 0.2,
         "cacheCreation": 2.5
+      },
+      "agreement": "all-agree"
+    },
+    "gpt-6-astra": {
+      "canonical": {
+        "input": 10,
+        "output": 50,
+        "cacheRead": 1,
+        "cacheCreation": 12.5,
+        "note": "developers.openai.com/api/docs/pricing 2026-09-10 (Codex's frontier model since 2026-09; models.dev + LiteLLM native agree); cache writes billed separately at 12.5 (1.25x input); long-context tier 20/2/25/75 NOT modeled; contextWindows 1,050,000 per models.dev (vendor page states no threshold; LiteLLM says 922,000 -- disagreement noted, models.dev used)"
+      },
+      "litellm": {
+        "key": "gpt-6-astra",
+        "input": 10,
+        "output": 50,
+        "cacheRead": 1
+      },
+      "modelsDev": {
+        "provider": "openai",
+        "input": 10,
+        "output": 50,
+        "cacheRead": 1,
+        "cacheCreation": 12.5
       },
       "agreement": "all-agree"
     },

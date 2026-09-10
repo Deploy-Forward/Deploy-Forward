@@ -291,7 +291,16 @@
     "cacheRead": 0.25,
     "cacheCreation": 12.5
    }
+  ],
+  "gpt-6-astra": [
+   {
+    "d": "2026-09-10",
+    "input": 10,
+    "output": 50,
+    "cacheRead": 1,
+    "cacheCreation": 12.5
+   }
   ]
  },
- "updatedAt": "2026-09-10T17:00:32.943Z"
+ "updatedAt": "2026-09-10T23:24:47.999Z"
 }
