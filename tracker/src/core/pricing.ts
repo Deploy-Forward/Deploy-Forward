@@ -123,6 +123,16 @@ export const PRICING: PricingTable = {
     "gpt-5.6-terra": { input: 2.0, output: 12.0, cacheRead: 0.2, cacheCreation: 2.0, note: "developers.openai.com/api/docs/pricing 2026-08-15; long-context (>=272K) tier 4/0.4/18 NOT modeled" },
     "gpt-5.6-luna": { input: 0.2, output: 1.2, cacheRead: 0.02, cacheCreation: 0.2, note: "developers.openai.com/api/docs/pricing 2026-08-15; long-context (>=272K) tier 0.4/0.04/1.8 NOT modeled" },
     "gpt-5.6-cyber": { input: 12.5, output: 75.0, cacheRead: 1.25, cacheCreation: 15.625, note: "developers.openai.com/api/docs/pricing 2026-08-29; cache writes billed separately at 15.625 (1.25x input) — the one gpt-5.6 variant with a real cache-write charge" },
+
+    // OpenAI gpt-6 family — gpt-6-astra is Codex's frontier model (Marco 2026-09-10) and
+    // was ALREADY the dominant id in local Codex corpora (1,753 message records in 21
+    // days) with zero rows here: every one of those tokens read as unpriced. Same lesson
+    // as claude-fable-5-1 — a new generation needs explicit rows BEFORE its id appears.
+    // Vendor page verified 2026-09-10; models.dev and LiteLLM (native openai row) agree
+    // exactly. Unlike sol/terra/luna, Astra has a REAL cache-write charge (12.5 = 1.25x
+    // input, same shape as cyber). Batch/Flex (50%) and Fast mode (2x) tiers are billing
+    // modes, not models — NOT modeled, same policy as Anthropic batch/fast.
+    "gpt-6-astra": { input: 10.0, output: 50.0, cacheRead: 1.0, cacheCreation: 12.5, note: "developers.openai.com/api/docs/pricing 2026-09-10 (Codex's frontier model since 2026-09; models.dev + LiteLLM native agree); cache writes billed separately at 12.5 (1.25x input); long-context tier 20/2/25/75 NOT modeled; contextWindows 1,050,000 per models.dev (vendor page states no threshold; LiteLLM says 922,000 -- disagreement noted, models.dev used)" },
     "gemini-3-flash": { input: 0.5, output: 3.0, cacheRead: 0.05, cacheCreation: 0.5, note: "VERIFY" },
     "gemini-3-pro": { input: 2.0, output: 12.0, cacheRead: 0.2, cacheCreation: 2.0, note: "VERIFY" },
 

@@ -116,6 +116,10 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   "gpt-5.6-terra": 1_050_000,
   "gpt-5.6-luna": 1_050_000,
   "gpt-5.6-cyber": 1_050_000,
+  // gpt-6-astra: models.dev limit.context 1,050,000 (2026-09-10 fetch); LiteLLM's native
+  // row says 922,000 while its bedrock/openrouter rows say 1,050,000 -- the vendor page
+  // states no threshold. models.dev's figure used; the disagreement is recorded, not hidden.
+  "gpt-6-astra": 1_050_000,
   // VERIFY-family: no exact "gemini-3-flash" key in the catalog (2026-07-17 fetch);
   // the "gemini-3-flash-preview" chat variant (1,048,576) is used as the family value.
   "gemini-3-flash": 1_048_576,
