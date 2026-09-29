@@ -214,6 +214,20 @@ export function parseCodexRollout(content: string): ParsedTranscript {
     };
     out.thinkingTokens = n(lastTotal.reasoning_output_tokens);
   }
+  // Pre-declaration usage: token_count snapshots that arrive BEFORE the first turn_context
+  // were credited to "unknown". When the session names exactly ONE real model, that usage
+  // can only have been that model's -- fold it in (buckets AND per-day events) so the
+  // session prices instead of reading as $0. Two or more real models: leave it "unknown";
+  // guessing which one would be an estimate presented as fact. (Real corpus: a 441.6M-token
+  // 2026-07-19 rollout, single model gpt-5.6-sol, entirely unpriced until this fold.)
+  const unknownBucket = byModel.get("unknown");
+  const realIds = [...byModel.keys()].filter((id) => id !== "unknown");
+  if (unknownBucket && realIds.length === 1) {
+    const only = realIds[0]!;
+    creditModel(byModel, only, unknownBucket);
+    byModel.delete("unknown");
+    for (const ev of out.usageEvents ?? []) if (ev.model === "unknown") ev.model = only;
+  }
   out.models = foldModelBuckets(byModel);
 
   // Context occupancy (lane T3): derived ONLY from the FINAL token_count event's own info --

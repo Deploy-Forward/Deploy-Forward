@@ -102,6 +102,38 @@ test("codex: per-turn deltas split buckets by model; duplicate re-emits never do
   assert.deepEqual(sum, { input: p.tokens.input, output: p.tokens.output, cacheRead: p.tokens.cacheRead });
 });
 
+// Real corpus, 2026-07-19 rollout (441.6M tokens): token_count snapshots arrive BEFORE the
+// first turn_context, so their deltas were credited to "unknown" and the whole session
+// priced as $0 while the file declares exactly ONE model. Attributing pre-declaration
+// usage to the only model the session ever names is not a guess; leaving it "unknown"
+// when two or more real models appear IS, and stays unknown.
+test("codex: usage before the first turn_context folds into the session's ONLY real model", () => {
+  const early = [
+    line({ timestamp: "2026-07-19T15:20:16.000Z", type: "session_meta", payload: { id: "sess-early", cwd: "/repo" } }),
+    line({ timestamp: "2026-07-19T15:20:20.000Z", type: "event_msg", payload: { type: "token_count", info: { total_token_usage: { input_tokens: 1000, cached_input_tokens: 400, output_tokens: 200, reasoning_output_tokens: 0, total_tokens: 1200 } } } }),
+    line({ timestamp: "2026-07-19T15:20:30.000Z", type: "turn_context", payload: { model: "gpt-5.6-sol" } }),
+    line({ timestamp: "2026-07-19T15:21:00.000Z", type: "event_msg", payload: { type: "token_count", info: { total_token_usage: { input_tokens: 5000, cached_input_tokens: 3000, output_tokens: 900, reasoning_output_tokens: 0, total_tokens: 5900 } } } }),
+  ].join("\n");
+  const p = parseCodexRollout(early);
+  assert.equal(p.model, "gpt-5.6-sol");
+  assert.deepEqual(p.models, [{ id: "gpt-5.6-sol", input: 2000, output: 900, cacheRead: 3000, cacheCreation: 0 }]);
+  assert.ok(p.usageEvents!.every((e) => e.model === "gpt-5.6-sol"), "per-day events carry the folded model too");
+});
+
+test("codex: pre-declaration usage stays unknown when the session names two real models", () => {
+  const two = [
+    line({ timestamp: "2026-07-19T15:20:16.000Z", type: "session_meta", payload: { id: "sess-two", cwd: "/repo" } }),
+    line({ timestamp: "2026-07-19T15:20:20.000Z", type: "event_msg", payload: { type: "token_count", info: { total_token_usage: { input_tokens: 1000, cached_input_tokens: 0, output_tokens: 100, reasoning_output_tokens: 0, total_tokens: 1100 } } } }),
+    line({ timestamp: "2026-07-19T15:20:30.000Z", type: "turn_context", payload: { model: "gpt-5.6-sol" } }),
+    line({ timestamp: "2026-07-19T15:21:00.000Z", type: "event_msg", payload: { type: "token_count", info: { total_token_usage: { input_tokens: 2000, cached_input_tokens: 0, output_tokens: 200, reasoning_output_tokens: 0, total_tokens: 2200 } } } }),
+    line({ timestamp: "2026-07-19T15:22:00.000Z", type: "turn_context", payload: { model: "gpt-6-astra" } }),
+    line({ timestamp: "2026-07-19T15:23:00.000Z", type: "event_msg", payload: { type: "token_count", info: { total_token_usage: { input_tokens: 3000, cached_input_tokens: 0, output_tokens: 300, reasoning_output_tokens: 0, total_tokens: 3300 } } } }),
+  ].join("\n");
+  const p = parseCodexRollout(two);
+  const ids = p.models.map((m) => m.id).sort();
+  assert.deepEqual(ids, ["gpt-5.6-sol", "gpt-6-astra", "unknown"]);
+});
+
 test("codex: single-model rollout buckets everything under that model", () => {
   const p = parseCodexRollout(ROLLOUT);
   assert.deepEqual(p.models, [{ id: "gpt-5.5", input: 2000, output: 900, cacheRead: 3000, cacheCreation: 0 }]);

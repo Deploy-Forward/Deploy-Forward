@@ -95,7 +95,11 @@ export const GITHUB_CLIENT_ID = process.env.DF_GITHUB_CLIENT_ID ?? "Ov23liATbjeG
  *       byte-identically and re-upload nothing (the per-thread digest gate absorbs them).
  *       (Renumbered from 15 at merge: L5b landed first and owns that epoch.)
  */
-export const PARSER_EPOCH = 16;
+//  17 = codex pre-declaration fold: token_count deltas that landed before the first
+//       turn_context were bucketed "unknown" and priced $0; a single-model session now folds
+//       them into its only model (441.6M tokens on one real 2026-07-19 rollout). The bump
+//       forces every device to re-parse and re-sync, so the Board's copy repairs itself.
+export const PARSER_EPOCH = 17;
 
 /**
  * Cached GET /api/device/context answer (the P1.1 enrollment bridge). The server owns
