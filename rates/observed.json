@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-29T22:40:04.154Z",
+  "generatedAt": "2026-09-29T22:48:06.363Z",
   "note": "Automated multi-source observation. The canonical table remains hand-verified against vendor pages; per-row `agreement` states how the sources relate. Never treat an aggregator value as vendor truth.",
   "canonicalTableVersion": 3,
   "sources": {
     "litellm": {
       "url": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
-      "fetchedAt": "2026-09-29T22:40:04.154Z"
+      "fetchedAt": "2026-09-29T22:48:06.363Z"
     },
     "modelsDev": {
       "url": "https://models.dev/api.json",
-      "fetchedAt": "2026-09-29T22:40:04.154Z"
+      "fetchedAt": "2026-09-29T22:48:06.363Z"
     }
   },
   "models": {
@@ -669,8 +669,8 @@
         "input": 4,
         "output": 20,
         "cacheRead": 0.4,
-        "cacheCreation": 4,
-        "note": "developers.openai.com/api/docs/pricing 2026-08-29; alias of gpt-5.6-sol per models.dev; repriced 5/30/0.5 -> 4/20/0.4 (LiteLLM first 2026-08-23, models.dev 2026-08-25, vendor-verified 2026-08-29); promotional floor: vendor says available at least through 2026-11-21 — a later reversion is a reprice to observe, never pre-entered; long-context (>=272K) tier 8/0.8/30 NOT modeled"
+        "cacheCreation": 5,
+        "note": "cache writes 5.00 (1.25x) like sol -- the cache-write drift compare caught this alias lagging sol on its first live run, 2026-09-29; developers.openai.com/api/docs/pricing 2026-08-29; alias of gpt-5.6-sol per models.dev; repriced 5/30/0.5 -> 4/20/0.4 (LiteLLM first 2026-08-23, models.dev 2026-08-25, vendor-verified 2026-08-29); promotional floor: vendor says available at least through 2026-11-21 — a later reversion is a reprice to observe, never pre-entered; long-context (>=272K) tier 8/0.8/30 NOT modeled"
       },
       "litellm": {
         "key": "gpt-5.6",

@@ -222,6 +222,13 @@
     "output": 20,
     "cacheRead": 0.4,
     "cacheCreation": 4
+   },
+   {
+    "d": "2026-09-29",
+    "input": 4,
+    "output": 20,
+    "cacheRead": 0.4,
+    "cacheCreation": 5
    }
   ],
   "gpt-5.6-cyber": [
@@ -458,5 +465,5 @@
    }
   ]
  },
- "updatedAt": "2026-09-29T22:40:04.154Z"
+ "updatedAt": "2026-09-29T22:48:06.363Z"
 }
