@@ -73,7 +73,7 @@ jobs:
           N=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number --jq '.[0].number')
           if [ -n "$N" ]; then gh issue comment "$N" --body "$BODY"; else gh issue create --title "$TITLE" --body "$BODY"; fi
       - name: File or update the drift issue
-        if: failure()
+        if: always() && steps.drift.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
