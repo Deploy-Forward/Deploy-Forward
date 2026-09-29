@@ -66,6 +66,11 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   // kept at the 200,000 family base for the SAME reason as claude-opus-4-8 below
   // (THE [1m] RULE above — the base window is what sessions actually run unless
   // the [1m] variant is explicitly engaged).
+  // Opus 5.5 / Sonnet 5.5 (platform.claude.com read 2026-09-29; both aggregators list
+  // 1,000,000): 200,000 family base per THE [1m] RULE above; explicit rows so the ids
+  // never fall through the suffix rule to a sibling.
+  "claude-opus-5-5": 200_000,
+  "claude-sonnet-5-5": 200_000,
   "claude-opus-5": 200_000,
   // VERIFY-family: catalog lists max_input_tokens 1,000,000 for the plain
   // "claude-opus-4-8" key (2026-07-17 fetch); kept at 200,000 -- the value
@@ -120,6 +125,10 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   // row says 922,000 while its bedrock/openrouter rows say 1,050,000 -- the vendor page
   // states no threshold. models.dev's figure used; the disagreement is recorded, not hidden.
   "gpt-6-astra": 1_050_000,
+  // gpt-6-sol / gpt-6-luna: models.dev 1,050,000 (2026-09-29); LiteLLM 922,000 — same
+  // recorded disagreement as astra, models.dev used.
+  "gpt-6-sol": 1_050_000,
+  "gpt-6-luna": 1_050_000,
   // VERIFY-family: no exact "gemini-3-flash" key in the catalog (2026-07-17 fetch);
   // the "gemini-3-flash-preview" chat variant (1,048,576) is used as the family value.
   "gemini-3-flash": 1_048_576,
@@ -135,6 +144,8 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   // Vendor-sourced: docs.x.ai models page lists grok-4.6 context 500k (2026-08-12
   // fetch, same read that sourced its price row). Same one-window-tiered-pricing
   // shape as grok-4.5: >=200K prompts bill higher, which this registry does not model.
+  // Vendor-sourced: docs.x.ai models page lists grok-4.7 context 500k (2026-09-29 fetch).
+  "grok-4.7": 500_000,
   "grok-4.6": 500_000,
   // Catalog-sourced: "xai/grok-4.5" max_input_tokens 500,000 (2026-08-07 fetch).
   // Consistent with the rate note's ">200K long-context tier": one 500K window with

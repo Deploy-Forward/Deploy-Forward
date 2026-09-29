@@ -76,6 +76,11 @@ export const PRICING: PricingTable = {
     // $5 / $25, cache read $0.50, 5m cache write $6.25 — same row as Opus 4.8. Was the
     // largest unpriced id on real corpora (3.3B tokens excluded from usage --cost while
     // the Board priced it via its feed overlay — the spend-misalignment driver).
+    // Opus 5.5 (Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-09-29): $4 / $20, 5m write $5, and its OWN cache-read multiplier — 0.05x =
+    // $0.20 (Fable 5.1 is 0.025x, everything else 0.1x). Explicit row REQUIRED: the
+    // suffix fallback resolved "claude-opus-5-5" to Opus 5's row (5/25, cache read 0.50)
+    // — a 25% overstatement on input/output and 2.5x on cache reads, displayed as priced.
+    "claude-opus-5-5": { input: 4.0, output: 20.0, cacheRead: 0.2, cacheCreation: 5.0, note: "Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-09-29; cache read 0.05x ($0.20); models.dev + LiteLLM agree; fast mode 8/40 and batch 2/10 are billing modes, NOT modeled" },
     "claude-opus-5": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreation: 6.25 },
     // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-opus-4-8": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreation: 6.25 },
@@ -90,6 +95,10 @@ export const PRICING: PricingTable = {
     // increase to $3/$15 per million input/output tokens on September 1, 2026 will not
     // occur." The Sept-1 reprice instruction that used to live here is CANCELLED; do
     // not execute it.
+    // Sonnet 5.5 (Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-09-29): same row as Sonnet 5 — $2 / $10, cache read $0.20, 5m write $2.50.
+    // Explicit anyway: the fallback happened to land on the right numbers today, and a
+    // row that is right by accident is one Sonnet-5 reprice away from being wrong.
+    "claude-sonnet-5-5": { input: 2.0, output: 10.0, cacheRead: 0.2, cacheCreation: 2.5, note: "Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-09-29; models.dev + LiteLLM agree" },
     "claude-sonnet-5": { input: 2.0, output: 10.0, cacheRead: 0.2, cacheCreation: 2.5 },
     // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-sonnet-4-6": { input: 3.0, output: 15.0, cacheRead: 0.3, cacheCreation: 3.75 },
@@ -119,9 +128,9 @@ export const PRICING: PricingTable = {
     // Bare "gpt-5.6" is models.dev's alias at sol's rates, kept so a harness that
     // logs the bare id prices identically to sol.
     "gpt-5.6": { input: 4.0, output: 20.0, cacheRead: 0.4, cacheCreation: 4.0, note: "developers.openai.com/api/docs/pricing 2026-08-29; alias of gpt-5.6-sol per models.dev; repriced 5/30/0.5 -> 4/20/0.4 (LiteLLM first 2026-08-23, models.dev 2026-08-25, vendor-verified 2026-08-29); promotional floor: vendor says available at least through 2026-11-21 — a later reversion is a reprice to observe, never pre-entered; long-context (>=272K) tier 8/0.8/30 NOT modeled" },
-    "gpt-5.6-sol": { input: 4.0, output: 20.0, cacheRead: 0.4, cacheCreation: 4.0, note: "developers.openai.com/api/docs/pricing 2026-08-29; repriced 5/30/0.5 -> 4/20/0.4 (LiteLLM first 2026-08-23, models.dev 2026-08-25, vendor-verified 2026-08-29); promotional floor: vendor says available at least through 2026-11-21 — a later reversion is a reprice to observe, never pre-entered; long-context (>=272K) tier 8/0.8/30 NOT modeled" },
-    "gpt-5.6-terra": { input: 2.0, output: 12.0, cacheRead: 0.2, cacheCreation: 2.0, note: "developers.openai.com/api/docs/pricing 2026-08-15; long-context (>=272K) tier 4/0.4/18 NOT modeled" },
-    "gpt-5.6-luna": { input: 0.2, output: 1.2, cacheRead: 0.02, cacheCreation: 0.2, note: "developers.openai.com/api/docs/pricing 2026-08-15; long-context (>=272K) tier 0.4/0.04/1.8 NOT modeled" },
+    "gpt-5.6-sol": { input: 4.0, output: 20.0, cacheRead: 0.4, cacheCreation: 5.0, note: "developers.openai.com/api/docs/pricing 2026-09-29: cache writes now billed separately at 5.00 (1.25x input; was cacheCreation=input) — a drift the checker cannot see, it never compares cache-write rates; developers.openai.com/api/docs/pricing 2026-08-29; repriced 5/30/0.5 -> 4/20/0.4 (LiteLLM first 2026-08-23, models.dev 2026-08-25, vendor-verified 2026-08-29); promotional floor: vendor says available at least through 2026-11-21 — a later reversion is a reprice to observe, never pre-entered; long-context (>=272K) tier 8/0.8/30 NOT modeled" },
+    "gpt-5.6-terra": { input: 2.0, output: 12.0, cacheRead: 0.2, cacheCreation: 2.5, note: "developers.openai.com/api/docs/pricing 2026-09-29: cache writes billed separately at 2.50 (1.25x input; was cacheCreation=input); developers.openai.com/api/docs/pricing 2026-08-15; long-context (>=272K) tier 4/0.4/18 NOT modeled" },
+    "gpt-5.6-luna": { input: 0.2, output: 1.2, cacheRead: 0.02, cacheCreation: 0.25, note: "developers.openai.com/api/docs/pricing 2026-09-29: cache writes billed separately at 0.25 (1.25x input; was cacheCreation=input); developers.openai.com/api/docs/pricing 2026-08-15; long-context (>=272K) tier 0.4/0.04/1.8 NOT modeled" },
     "gpt-5.6-cyber": { input: 12.5, output: 75.0, cacheRead: 1.25, cacheCreation: 15.625, note: "developers.openai.com/api/docs/pricing 2026-08-29; cache writes billed separately at 15.625 (1.25x input) — the one gpt-5.6 variant with a real cache-write charge" },
 
     // OpenAI gpt-6 family — gpt-6-astra is Codex's frontier model (Marco 2026-09-10) and
@@ -132,7 +141,12 @@ export const PRICING: PricingTable = {
     // exactly. Unlike sol/terra/luna, Astra has a REAL cache-write charge (12.5 = 1.25x
     // input, same shape as cyber). Batch/Flex (50%) and Fast mode (2x) tiers are billing
     // modes, not models — NOT modeled, same policy as Anthropic batch/fast.
-    "gpt-6-astra": { input: 10.0, output: 50.0, cacheRead: 1.0, cacheCreation: 12.5, note: "developers.openai.com/api/docs/pricing 2026-09-10 (Codex's frontier model since 2026-09; models.dev + LiteLLM native agree); cache writes billed separately at 12.5 (1.25x input); long-context tier 20/2/25/75 NOT modeled; contextWindows 1,050,000 per models.dev (vendor page states no threshold; LiteLLM says 922,000 -- disagreement noted, models.dev used)" },
+    // gpt-6-sol / gpt-6-luna (developers.openai.com/api/docs/pricing 2026-09-29; models.dev + LiteLLM agree exactly): the family filled
+    // out below astra. Cache writes 1.25x on both. Long-context tiers (sol 4/0.4/5/15,
+    // luna 0.2/0.02/0.25/0.75) NOT modeled, same policy as astra.
+    "gpt-6-sol": { input: 2.0, output: 10.0, cacheRead: 0.2, cacheCreation: 2.5, note: "developers.openai.com/api/docs/pricing 2026-09-29; cache writes 2.50 (1.25x input); long-context tier NOT modeled" },
+    "gpt-6-luna": { input: 0.1, output: 0.5, cacheRead: 0.01, cacheCreation: 0.125, note: "developers.openai.com/api/docs/pricing 2026-09-29; cache writes 0.125 (1.25x input); long-context tier NOT modeled" },
+    "gpt-6-astra": { input: 10.0, output: 50.0, cacheRead: 1.0, cacheCreation: 12.5, note: "re-verified unchanged developers.openai.com/api/docs/pricing 2026-09-29; developers.openai.com/api/docs/pricing 2026-09-10 (Codex's frontier model since 2026-09; models.dev + LiteLLM native agree); cache writes billed separately at 12.5 (1.25x input); long-context tier 20/2/25/75 NOT modeled; contextWindows 1,050,000 per models.dev (vendor page states no threshold; LiteLLM says 922,000 -- disagreement noted, models.dev used)" },
     "gemini-3-flash": { input: 0.5, output: 3.0, cacheRead: 0.05, cacheCreation: 0.5, note: "VERIFY" },
     "gemini-3-pro": { input: 2.0, output: 12.0, cacheRead: 0.2, cacheCreation: 2.0, note: "VERIFY" },
 
@@ -146,7 +160,11 @@ export const PRICING: PricingTable = {
     // follows this table's stated convention (no separate cache-write billing ->
     // cacheCreation = input rate); web's original entries carried 0 there, inert in
     // practice because the grok adapter never emits cache-write tokens.
-    "grok-4.6": { input: 2.0, output: 6.0, cacheRead: 0.5, cacheCreation: 2.0, note: "docs.x.ai 2026-08-12, re-verified unchanged 2026-08-29 (2/6/0.5; models.dev agrees); long-context (>=200K prompt) tier 4/1/12 NOT modeled" },
+    // grok-4.7 (docs.x.ai 2026-09-29): same row as 4.6 — 2/6, cached 0.5, 500k context; long-context
+    // (>=200K) tier 4/1/12 NOT modeled. models.dev agrees; LiteLLM has no row yet.
+    // Explicit so the id never falls through the suffix rule.
+    "grok-4.7": { input: 2.0, output: 6.0, cacheRead: 0.5, cacheCreation: 2.0, note: "docs.x.ai 2026-09-29; long-context (>=200K prompt) tier 4/1/12 NOT modeled; models.dev agrees, LiteLLM absent at add time" },
+    "grok-4.6": { input: 2.0, output: 6.0, cacheRead: 0.5, cacheCreation: 2.0, note: "docs.x.ai 2026-08-12, re-verified unchanged 2026-08-29 and 2026-09-29 (2/6/0.5; models.dev agrees); long-context (>=200K prompt) tier 4/1/12 NOT modeled" },
     "grok-4.5": { input: 2.0, output: 6.0, cacheRead: 0.3, cacheCreation: 2.0, note: "docs.x.ai 2026-08-14 (cacheRead corrected 0.5->0.3 - the drift watch's first catch); long-context (>=200K) tier is higher and NOT modeled" },
     "grok-4.3": { input: 1.25, output: 2.5, cacheRead: 0.2, cacheCreation: 1.25, note: "docs.x.ai 2026-07-10; long-context (>200K) tier is higher and NOT modeled" },
     "grok-build-0.1": { input: 1.0, output: 2.0, cacheRead: 0.2, cacheCreation: 1.0, note: "docs.x.ai 2026-07-10" },
