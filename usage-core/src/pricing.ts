@@ -117,6 +117,13 @@ export const PRICING: PricingTable = {
     "kimi-k2": { input: 0.6, output: 2.5, cacheRead: 0.15, cacheCreation: 0.6, note: "VERIFY" },
     "glm-4.6": { input: 0.6, output: 2.2, cacheRead: 0.11, cacheCreation: 0.6, note: "VERIFY" },
     "gpt-5": { input: 1.25, output: 10.0, cacheRead: 0.125, cacheCreation: 1.25, note: "VERIFY" },
+    // gpt-5.5 / gpt-5-mini (developers.openai.com/api/docs/pricing 2026-09-29; models.dev agrees): seen in local Codex corpora (12 records
+    // of gpt-5.5; 32K tokens of gpt-5-mini) and unpriced until now. Vendor page shows a dash
+    // for cache writes on both (no separate charge) -> cacheCreation = input. gpt-5.5's
+    // long-context tier 10/1/45 NOT modeled; gpt-5.5-pro (30/180, no caching) not added --
+    // never observed in any corpus.
+    "gpt-5.5": { input: 5.0, output: 30.0, cacheRead: 0.5, cacheCreation: 5.0, note: "developers.openai.com/api/docs/pricing 2026-09-29; no separate cache-write charge, cacheCreation = input; long-context (>=272K) tier 10/1/45 NOT modeled" },
+    "gpt-5-mini": { input: 0.25, output: 2.0, cacheRead: 0.025, cacheCreation: 0.25, note: "developers.openai.com/api/docs/pricing 2026-09-29; no separate cache-write charge, cacheCreation = input" },
     "gpt-5.4": { input: 2.5, output: 15.0, cacheRead: 0.25, cacheCreation: 2.5, note: "developers.openai.com/api/docs/pricing 2026-08-15 (<272K context tier); no separate cache-write charge, cacheCreation = input" },
     "gpt-5.4-mini": { input: 0.75, output: 4.5, cacheRead: 0.075, cacheCreation: 0.75, note: "developers.openai.com/api/docs/pricing 2026-08-15; no separate cache-write charge, cacheCreation = input" },
 

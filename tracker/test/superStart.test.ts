@@ -608,15 +608,15 @@ test("readShowcaseData: real corpus counts + ledger rows, and NEVER mutates stat
     assert.ok(data.modelRows.some((m) => m.model === "gpt-5.5"), "Codex models join the mix");
     // Hand-computed against the canonical usage-core rates (test/coreParity.test.ts pins them):
     //   opus-4-8  in 120 @ $5/M + out 60 @ $25/M            = 0.0006  + 0.0015   = 0.0021
-    //   gpt-5.5   in 200 @ $1.25/M + out 80 @ $10/M
-    //             + cacheRead 100 @ $0.125/M                 = 0.00025 + 0.0008
-    //                                                          + 0.0000125       = 0.0010625
-    //   total                                                                    = 0.0031625
-    // NOTE: gpt-5.5 prices through the "gpt-5" key by longest-prefix — the server's own
-    // resolveBase does exactly this, so the board charges it the same way. Whether a
-    // ".5" release is really a gpt-5 variant is a REAL open question (flagged to Marco),
-    // but the two surfaces now agree, which is what this fixture guards.
-    const expected = 0.0021 + 0.0010625;
+    //   gpt-5.5   in 200 @ $5/M + out 80 @ $30/M
+    //             + cacheRead 100 @ $0.50/M                  = 0.001 + 0.0024
+    //                                                          + 0.00005         = 0.00345
+    //   total                                                                    = 0.00555
+    // The open question this fixture used to carry ("is gpt-5.5 really a gpt-5 variant?")
+    // was settled at the vendor page 2026-09-29: gpt-5.5 is its own product at $5/$30
+    // (cache read $0.50), so it now has an explicit canonical row and no longer resolves
+    // through the gpt-5 key. The figures above are the vendor page's, not recomputed.
+    const expected = 0.0021 + 0.00345;
     assert.ok(
       data.spendTotalUsd !== null && Math.abs(data.spendTotalUsd - expected) < 1e-12,
       `corpus spend exact: expected ${expected}, got ${data.spendTotalUsd}`,
