@@ -128,6 +128,8 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   // gpt-6-astra: models.dev limit.context 1,050,000 (2026-09-10 fetch); LiteLLM's native
   // row says 922,000 while its bedrock/openrouter rows say 1,050,000 -- the vendor page
   // states no threshold. models.dev's figure used; the disagreement is recorded, not hidden.
+  // gpt-6.1-sol: models.dev limit.context 1,050,000 (2026-09-29 fetch).
+  "gpt-6.1-sol": 1_050_000,
   "gpt-6-astra": 1_050_000,
   // gpt-6-sol / gpt-6-luna: models.dev 1,050,000 (2026-09-29); LiteLLM 922,000 — same
   // recorded disagreement as astra, models.dev used.
@@ -135,6 +137,14 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   "gpt-6-luna": 1_050_000,
   // VERIFY-family: no exact "gemini-3-flash" key in the catalog (2026-07-17 fetch);
   // the "gemini-3-flash-preview" chat variant (1,048,576) is used as the family value.
+  // Gemini 3.x flash family: models.dev limit.context 1,048,576 for every row (2026-09-29).
+  "gemini-3.8-flash": 1_048_576,
+  "gemini-3.7-flash": 1_048_576,
+  "gemini-3.6-flash": 1_048_576,
+  "gemini-flash-latest": 1_048_576,
+  "gemini-3.5-flash": 1_048_576,
+  "gemini-3.5-flash-lite": 1_048_576,
+  "gemini-flash-lite-latest": 1_048_576,
   "gemini-3-flash": 1_048_576,
   // VERIFY-family: no exact "gemini-3-pro" key in the catalog (2026-07-17 fetch); the
   // "gemini-3-pro-preview" CHAT variant (1,048,576) is used -- NOT the separate

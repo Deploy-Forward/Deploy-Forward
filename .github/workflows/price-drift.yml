@@ -55,6 +55,23 @@ jobs:
         id: drift
         working-directory: tracker
         run: node --import tsx ../scripts/check-price-drift.mjs
+      # The alarm the drift check cannot raise: a NEW model is not drifting, it is absent
+      # (and may be silently priced at a sibling's rates by the resolver's fallback). Runs
+      # even when the drift step failed — the two findings are independent.
+      - name: Check for unpriced new models
+        id: unpriced
+        if: always()
+        working-directory: tracker
+        run: node --import tsx ../scripts/check-unpriced-ids.mjs
+      - name: File or update the unpriced-models issue
+        if: always() && steps.unpriced.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="Unpriced new models: usage-core has no row for a recently released vendor model"
+          BODY="The daily unpriced-id check found native-vendor models released in the last 120 days with no exact row in usage-core. Some may ALREADY be priced through the resolver's fallback at a sibling's rates — see the run log: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }} — verify at the VENDOR's own pricing page, then add explicit rows (never trust the aggregator hint blindly; it is printed as a hint only)."
+          N=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number --jq '.[0].number')
+          if [ -n "$N" ]; then gh issue comment "$N" --body "$BODY"; else gh issue create --title "$TITLE" --body "$BODY"; fi
       - name: File or update the drift issue
         if: failure()
         env:

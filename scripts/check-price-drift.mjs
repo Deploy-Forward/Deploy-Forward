@@ -53,6 +53,10 @@ export function driftFor(id, ours, key, entry) {
     ["input", ours.input, perM(entry.input_cost_per_token)],
     ["output", ours.output, perM(entry.output_cost_per_token)],
     ["cacheRead", ours.cacheRead, perM(entry.cache_read_input_token_cost)],
+    // Added 2026-09-29: OpenAI moved gpt-5.6 cache writes from "bills as input" to 1.25x
+    // and this checker could not see it — cache-write was never compared. Absent field
+    // still means "cannot drift" (most catalog rows carry none).
+    ["cacheCreation", ours.cacheCreation, perM(entry.cache_creation_input_token_cost)],
   ];
   const drifts = [];
   for (const [field, mine, theirs] of checks) {

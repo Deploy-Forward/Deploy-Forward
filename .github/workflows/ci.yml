@@ -48,3 +48,5 @@ jobs:
       # The docs pin exact install versions on purpose; a pin that lags the
       # package version silently recommends an old artifact. Fail instead.
       - run: node scripts/check-readme-version.mjs
+      # The pricing guards (drift + unpriced-id alarm) are pure functions with tests.
+      - run: cd tracker && npm install --no-audit --no-fund && node --import tsx --test ../scripts/*.test.mjs
