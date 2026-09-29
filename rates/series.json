@@ -384,7 +384,79 @@
     "cacheRead": 0.5,
     "cacheCreation": 5
    }
+  ],
+  "gemini-3.5-flash": [
+   {
+    "d": "2026-09-29",
+    "input": 1.5,
+    "output": 9,
+    "cacheRead": 0.15,
+    "cacheCreation": 1.5
+   }
+  ],
+  "gemini-3.5-flash-lite": [
+   {
+    "d": "2026-09-29",
+    "input": 0.3,
+    "output": 2.5,
+    "cacheRead": 0.03,
+    "cacheCreation": 0.3
+   }
+  ],
+  "gemini-3.6-flash": [
+   {
+    "d": "2026-09-29",
+    "input": 0.75,
+    "output": 3.75,
+    "cacheRead": 0.075,
+    "cacheCreation": 0.75
+   }
+  ],
+  "gemini-3.7-flash": [
+   {
+    "d": "2026-09-29",
+    "input": 0.75,
+    "output": 3.75,
+    "cacheRead": 0.075,
+    "cacheCreation": 0.75
+   }
+  ],
+  "gemini-3.8-flash": [
+   {
+    "d": "2026-09-29",
+    "input": 0.75,
+    "output": 3.75,
+    "cacheRead": 0.075,
+    "cacheCreation": 0.75
+   }
+  ],
+  "gemini-flash-latest": [
+   {
+    "d": "2026-09-29",
+    "input": 0.75,
+    "output": 3.75,
+    "cacheRead": 0.075,
+    "cacheCreation": 0.75
+   }
+  ],
+  "gemini-flash-lite-latest": [
+   {
+    "d": "2026-09-29",
+    "input": 0.3,
+    "output": 2.5,
+    "cacheRead": 0.03,
+    "cacheCreation": 0.3
+   }
+  ],
+  "gpt-6.1-sol": [
+   {
+    "d": "2026-09-29",
+    "input": 2,
+    "output": 10,
+    "cacheRead": 0.1,
+    "cacheCreation": 2.5
+   }
   ]
  },
- "updatedAt": "2026-09-29T18:38:49.838Z"
+ "updatedAt": "2026-09-29T22:40:04.154Z"
 }
