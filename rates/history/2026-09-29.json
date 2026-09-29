@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-29T11:04:22.450Z",
+  "generatedAt": "2026-09-29T11:44:55.474Z",
   "note": "Automated multi-source observation. The canonical table remains hand-verified against vendor pages; per-row `agreement` states how the sources relate. Never treat an aggregator value as vendor truth.",
   "canonicalTableVersion": 3,
   "sources": {
     "litellm": {
       "url": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
-      "fetchedAt": "2026-09-29T11:04:22.450Z"
+      "fetchedAt": "2026-09-29T11:44:55.474Z"
     },
     "modelsDev": {
       "url": "https://models.dev/api.json",
-      "fetchedAt": "2026-09-29T11:04:22.450Z"
+      "fetchedAt": "2026-09-29T11:44:55.474Z"
     }
   },
   "models": {
@@ -411,6 +411,29 @@
       },
       "agreement": "all-agree"
     },
+    "gpt-5-mini": {
+      "canonical": {
+        "input": 0.25,
+        "output": 2,
+        "cacheRead": 0.025,
+        "cacheCreation": 0.25,
+        "note": "developers.openai.com/api/docs/pricing 2026-09-29; no separate cache-write charge, cacheCreation = input"
+      },
+      "litellm": {
+        "key": "gpt-5-mini",
+        "input": 0.25,
+        "output": 2,
+        "cacheRead": 0.024999999999999998
+      },
+      "modelsDev": {
+        "provider": "openai",
+        "input": 0.25,
+        "output": 2,
+        "cacheRead": 0.025,
+        "cacheCreation": null
+      },
+      "agreement": "all-agree"
+    },
     "gpt-5.4": {
       "canonical": {
         "input": 2.5,
@@ -453,6 +476,29 @@
         "input": 0.75,
         "output": 4.5,
         "cacheRead": 0.075,
+        "cacheCreation": null
+      },
+      "agreement": "all-agree"
+    },
+    "gpt-5.5": {
+      "canonical": {
+        "input": 5,
+        "output": 30,
+        "cacheRead": 0.5,
+        "cacheCreation": 5,
+        "note": "developers.openai.com/api/docs/pricing 2026-09-29; no separate cache-write charge, cacheCreation = input; long-context (>=272K) tier 10/1/45 NOT modeled"
+      },
+      "litellm": {
+        "key": "gpt-5.5",
+        "input": 5,
+        "output": 30,
+        "cacheRead": 0.5
+      },
+      "modelsDev": {
+        "provider": "openai",
+        "input": 5,
+        "output": 30,
+        "cacheRead": 0.5,
         "cacheCreation": null
       },
       "agreement": "all-agree"

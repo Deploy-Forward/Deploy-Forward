@@ -366,7 +366,25 @@
     "cacheRead": 0.5,
     "cacheCreation": 2
    }
+  ],
+  "gpt-5-mini": [
+   {
+    "d": "2026-09-29",
+    "input": 0.25,
+    "output": 2,
+    "cacheRead": 0.025,
+    "cacheCreation": 0.25
+   }
+  ],
+  "gpt-5.5": [
+   {
+    "d": "2026-09-29",
+    "input": 5,
+    "output": 30,
+    "cacheRead": 0.5,
+    "cacheCreation": 5
+   }
   ]
  },
- "updatedAt": "2026-09-29T11:04:22.450Z"
+ "updatedAt": "2026-09-29T11:44:55.474Z"
 }
