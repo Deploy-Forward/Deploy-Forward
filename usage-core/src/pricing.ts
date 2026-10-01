@@ -123,6 +123,11 @@ export const PRICING: PricingTable = {
     // long-context tier 10/1/45 NOT modeled; gpt-5.5-pro (30/180, no caching) not added --
     // never observed in any corpus.
     "gpt-5.5": { input: 5.0, output: 30.0, cacheRead: 0.5, cacheCreation: 5.0, note: "developers.openai.com/api/docs/pricing 2026-09-29; no separate cache-write charge, cacheCreation = input; long-context (>=272K) tier 10/1/45 NOT modeled" },
+    // gpt-5.5-cyber (developers.openai.com/api/docs/pricing 2026-09-30, Cyber models table): 12.5/75, cached 1.25, cache writes shown
+    // as a dash (no separate charge -> cacheCreation = input), no long-context tier.
+    // NOT on models.dev, so the unpriced-id alarm structurally cannot see it -- found
+    // only by the vendor-page visit; recorded on public issue #7 as the residual gap.
+    "gpt-5.5-cyber": { input: 12.5, output: 75.0, cacheRead: 1.25, cacheCreation: 12.5, note: "developers.openai.com/api/docs/pricing 2026-09-30; no separate cache-write charge, cacheCreation = input; no long-context tier; absent from models.dev and LiteLLM at add time" },
     "gpt-5-mini": { input: 0.25, output: 2.0, cacheRead: 0.025, cacheCreation: 0.25, note: "developers.openai.com/api/docs/pricing 2026-09-29; no separate cache-write charge, cacheCreation = input" },
     "gpt-5.4": { input: 2.5, output: 15.0, cacheRead: 0.25, cacheCreation: 2.5, note: "developers.openai.com/api/docs/pricing 2026-08-15 (<272K context tier); no separate cache-write charge, cacheCreation = input" },
     "gpt-5.4-mini": { input: 0.75, output: 4.5, cacheRead: 0.075, cacheCreation: 0.75, note: "developers.openai.com/api/docs/pricing 2026-08-15; no separate cache-write charge, cacheCreation = input" },

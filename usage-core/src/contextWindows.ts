@@ -114,6 +114,9 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   // gpt-5.5: models.dev limit.context (2026-09-29 fetch) -- vendor page states only the
   // 272K short/long tier threshold. gpt-5-mini: catalog max_input_tokens 272,000.
   "gpt-5.5": 1_050_000,
+  // gpt-5.5-cyber: no catalog entry anywhere (2026-09-30); typed from the gpt-5.5 family
+  // window -- VERIFY-family.
+  "gpt-5.5-cyber": 1_050_000,
   "gpt-5-mini": 272_000,
   "gpt-5.4": 1_050_000,
   // Catalog-sourced: max_input_tokens 1,050,000 (2026-07-17 fetch).
