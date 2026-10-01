@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-10-01T02:37:03.897Z",
+  "generatedAt": "2026-10-01T02:49:59.059Z",
   "note": "Automated multi-source observation. The canonical table remains hand-verified against vendor pages; per-row `agreement` states how the sources relate. Never treat an aggregator value as vendor truth.",
   "canonicalTableVersion": 3,
   "sources": {
     "litellm": {
       "url": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
-      "fetchedAt": "2026-10-01T02:37:03.897Z"
+      "fetchedAt": "2026-10-01T02:49:59.059Z"
     },
     "modelsDev": {
       "url": "https://models.dev/api.json",
-      "fetchedAt": "2026-10-01T02:37:03.897Z"
+      "fetchedAt": "2026-10-01T02:49:59.059Z"
     }
   },
   "models": {
@@ -662,6 +662,23 @@
         "cacheRead": 0.5,
         "cacheCreation": null
       },
+      "agreement": "all-agree"
+    },
+    "gpt-5.5-cyber": {
+      "canonical": {
+        "input": 12.5,
+        "output": 75,
+        "cacheRead": 1.25,
+        "cacheCreation": 12.5,
+        "note": "developers.openai.com/api/docs/pricing 2026-09-30; no separate cache-write charge, cacheCreation = input; no long-context tier; absent from models.dev and LiteLLM at add time"
+      },
+      "litellm": {
+        "key": "gpt-5.5-cyber",
+        "input": 12.5,
+        "output": 75,
+        "cacheRead": 1.25
+      },
+      "modelsDev": null,
       "agreement": "all-agree"
     },
     "gpt-5.6": {

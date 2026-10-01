@@ -463,7 +463,16 @@
     "cacheRead": 0.1,
     "cacheCreation": 2.5
    }
+  ],
+  "gpt-5.5-cyber": [
+   {
+    "d": "2026-10-01",
+    "input": 12.5,
+    "output": 75,
+    "cacheRead": 1.25,
+    "cacheCreation": 12.5
+   }
   ]
  },
- "updatedAt": "2026-10-01T02:37:03.897Z"
+ "updatedAt": "2026-10-01T02:49:59.059Z"
 }
