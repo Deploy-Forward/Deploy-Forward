@@ -71,6 +71,46 @@ export function findUnpricedIds(catalog, rates = PRICING.models, today = new Dat
   return flags.sort((a, b) => (a.releaseDate < b.releaseDate ? 1 : -1));
 }
 
+/**
+ * ACKNOWLEDGED — ids the vendor publishes NO price for, so no row can honestly be
+ * entered. Each entry carries the vendor evidence and a RE-CHECK date; past that date
+ * the flag returns by itself (never a permanent mute). An id that is priced via a
+ * fallback row can never be acknowledged: that is the sibling-rate trap, not a vendor
+ * gap, and it must stay red until an explicit row exists.
+ */
+export const ACKNOWLEDGED = [
+  {
+    id: "gpt-daybreak-blue-latest",
+    recheckBy: "2026-10-30",
+    reason: "developers.openai.com/api/docs/pricing 2026-09-30: 'Our latest Daybreak models' under Cyber models, no rates listed (public issue #7)",
+  },
+  {
+    id: "gpt-daybreak-red-latest",
+    recheckBy: "2026-10-30",
+    reason: "developers.openai.com/api/docs/pricing 2026-09-30: 'Our latest Daybreak models' under Cyber models, no rates listed (public issue #7)",
+  },
+];
+
+/** splitAcknowledged(flags, ack, today) — pure: {flags, acknowledged}. */
+export function splitAcknowledged(flags, ack = ACKNOWLEDGED, today = new Date()) {
+  const live = new Map();
+  for (const a of ack) {
+    const by = new Date(a.recheckBy);
+    if (!Number.isNaN(by.getTime()) && today <= by) live.set(a.id, a);
+  }
+  const out = { flags: [], acknowledged: [] };
+  for (const f of flags) {
+    const a = live.get(f.id);
+    if (a && !f.pricedViaFallback) out.acknowledged.push({ ...f, recheckBy: a.recheckBy, reason: a.reason });
+    else out.flags.push(f);
+  }
+  return out;
+}
+
+export function formatAcknowledged(acked) {
+  return acked.map((a) => `  ${a.provider}/${a.id} — acknowledged, re-check by ${a.recheckBy}: ${a.reason}`).join("\n");
+}
+
 export function formatFlags(flags) {
   const lines = [];
   for (const f of flags) {
@@ -89,7 +129,11 @@ async function main() {
     console.error(`models.dev fetch failed: HTTP ${res.status} — cannot check today, failing loud`);
     process.exit(2);
   }
-  const flags = findUnpricedIds(await res.json());
+  const { flags, acknowledged } = splitAcknowledged(findUnpricedIds(await res.json()));
+  if (acknowledged.length > 0) {
+    console.log(`info: acknowledged (vendor publishes no price yet; re-check dated):`);
+    console.log(formatAcknowledged(acknowledged));
+  }
   if (flags.length === 0) {
     console.log(`OK: every native-vendor text model released in the last ${RECENT_DAYS} days has an exact canonical row.`);
     return;

@@ -1,7 +1,7 @@
 // node --test scripts/  (run from the repository root; the script imports the canonical table)
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { findUnpricedIds, formatFlags } from "./check-unpriced-ids.mjs";
+import { findUnpricedIds, formatFlags, splitAcknowledged, formatAcknowledged } from "./check-unpriced-ids.mjs";
 
 const TODAY = new Date("2026-09-29T12:00:00Z");
 const text = { input: ["text"], output: ["text"] };
@@ -53,6 +53,30 @@ test("exact keys, dated pins of known keys, old releases, resellers and non-text
     "some-reseller": { models: { "claude-opus-5-5": model("claude-opus-5-5", "2026-09-22", { input: 4.4, output: 22 }) } },
   };
   assert.deepEqual(findUnpricedIds(catalog, RATES, TODAY), []);
+});
+
+// An id the VENDOR publishes no price for cannot be entered, and an alarm that goes
+// red on it every day teaches people to ignore the alarm. Such an id is acknowledged
+// ONCE, with the vendor evidence and a re-check date; until that date it reports as
+// info, after it the flag returns on its own. Never a permanent mute.
+test("an acknowledged id reports as info until its re-check date, then flags again", () => {
+  const catalog = { openai: { models: { "gpt-daybreak-blue-latest": model("gpt-daybreak-blue-latest", "2026-08-07", { input: 4, output: 20 }) } } };
+  const ack = [{ id: "gpt-daybreak-blue-latest", recheckBy: "2026-10-30", reason: "vendor page lists the model without rates" }];
+  const before = splitAcknowledged(findUnpricedIds(catalog, RATES, new Date("2026-09-30T12:00:00Z")), ack, new Date("2026-09-30T12:00:00Z"));
+  assert.deepEqual(before.flags, []);
+  assert.equal(before.acknowledged.length, 1);
+  assert.match(formatAcknowledged(before.acknowledged), /gpt-daybreak-blue-latest .*re-check by 2026-10-30/);
+  const after = splitAcknowledged(findUnpricedIds(catalog, RATES, new Date("2026-10-31T12:00:00Z")), ack, new Date("2026-10-31T12:00:00Z"));
+  assert.equal(after.flags.length, 1, "the acknowledgment expired: the id flags again");
+  assert.deepEqual(after.acknowledged, []);
+});
+
+test("an acknowledgment never covers an id that is priced via fallback (that is the trap, not a vendor gap)", () => {
+  const catalog = { anthropic: { models: { "claude-opus-5-5": model("claude-opus-5-5", "2026-09-22", { input: 4, output: 20 }) } } };
+  const ack = [{ id: "claude-opus-5-5", recheckBy: "2099-01-01", reason: "someone tried to mute the trap" }];
+  const r = splitAcknowledged(findUnpricedIds(catalog, RATES, TODAY), ack, TODAY);
+  assert.equal(r.flags.length, 1);
+  assert.deepEqual(r.acknowledged, []);
 });
 
 test("flags sort newest release first", () => {
