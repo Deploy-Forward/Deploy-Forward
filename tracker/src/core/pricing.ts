@@ -104,6 +104,24 @@ export const PRICING: PricingTable = {
     "claude-sonnet-4-6": { input: 3.0, output: 15.0, cacheRead: 0.3, cacheCreation: 3.75 },
     // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-sonnet-4-5": { input: 3.0, output: 15.0, cacheRead: 0.3, cacheCreation: 3.75 },
+    // Haiku 5.5 (Verified verbatim at platform.claude.com/docs/en/about-claude/pricing
+    // 2026-10-07): "Claude Haiku 5.5 (for prompts up to 100,000 tokens): $0.10 / MTok
+    // input, $0.125 5m cache writes, $0.20 1h cache writes, $0.01 cache hits, $0.50
+    // output." This <=100K-prompt tier is the row below -- the tier aggregators list
+    // (models.dev/LiteLLM hint 0.1/0.5, cr=0.01, cw=0.125) and the one check-price-drift
+    // and check-unpriced-ids compare against. Released 2026-10-07 and was the id the
+    // public price-drift workflow's "Check for unpriced new models" step flagged the
+    // same day (every token reading as $0) before this row existed.
+    // Prompts OVER 100,000 tokens bill at $0.50 input / $0.625 5m write / $1 1h write /
+    // $0.05 cache hits / $2.50 output (same page) -- NOT modeled, same "long-context
+    // tier NOT modeled" policy this table already applies to gpt-5.6/grok above. Unlike
+    // every other current Claude family, this split is NOT the "[1m]"-suffix beta: the
+    // vendor page's own Long context pricing section singles it out — "Claude 4.6 and
+    // later models (except Claude Haiku 5.5) ... include the full 1M token context
+    // window at standard pricing ... Claude Haiku 5.5 is priced by prompt length" — so
+    // the tiering is a property of the base model, not an opt-in. See contextWindows.ts
+    // for the matching context-window entry and its own note.
+    "claude-haiku-5-5": { input: 0.10, output: 0.50, cacheRead: 0.01, cacheCreation: 0.125, note: "Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-10-07; this is the <=100,000-prompt-token tier. Prompts over 100,000 tokens bill at input 0.50 / cacheCreation(5m) 0.625 / cacheRead 0.05 / output 2.50 (same page) -- NOT modeled, same policy as this table's other long-context tiers" },
     // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-haiku-4-5": { input: 1.0, output: 5.0, cacheRead: 0.1, cacheCreation: 1.25 },
 

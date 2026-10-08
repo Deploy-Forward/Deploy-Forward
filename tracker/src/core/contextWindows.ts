@@ -94,6 +94,18 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   // Catalog-sourced: max_input_tokens 200,000 (2026-07-17 fetch) -- agrees with the
   // family base already, no divergence to flag.
   "claude-sonnet-4-5": 200_000,
+  // Haiku 5.5 (platform.claude.com/docs/en/about-claude/models/overview, read
+  // 2026-10-07: the model-comparison table lists "Context window: 1M tokens" for
+  // Claude Haiku 5.5, same row as Fable 5.1/Opus 5.5/Sonnet 5.5): kept at the
+  // 200,000 family base per THE [1m] RULE above -- 1,000,000 stays reserved for ids
+  // carrying the literal "[1m]" suffix. Flag this one as a genuine divergence from
+  // the vendor's stated window, not just the usual "[1m]"-opt-in framing: per
+  // platform.claude.com/docs/en/about-claude/pricing (Long context pricing, read
+  // 2026-10-07), "Claude Haiku 5.5 is priced by prompt length: a prompt of over
+  // 100,000 tokens pays higher prices" -- i.e. its real window IS 1M, but pricing
+  // inside that window is tiered at 100K (NOT modeled here; see pricing.ts's
+  // claude-haiku-5-5 note for the two tiers' rates).
+  "claude-haiku-5-5": 200_000,
   // Catalog-sourced: max_input_tokens 200,000 (2026-07-17 fetch) -- agrees with the
   // family base already, no divergence to flag.
   "claude-haiku-4-5": 200_000,
