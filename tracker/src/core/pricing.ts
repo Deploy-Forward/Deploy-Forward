@@ -98,7 +98,7 @@ export const PRICING: PricingTable = {
     // Sonnet 5.5 (Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-09-29): same row as Sonnet 5 — $2 / $10, cache read $0.20, 5m write $2.50.
     // Explicit anyway: the fallback happened to land on the right numbers today, and a
     // row that is right by accident is one Sonnet-5 reprice away from being wrong.
-    "claude-sonnet-5-5": { input: 2.0, output: 10.0, cacheRead: 0.2, cacheCreation: 2.5, note: "Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-09-29; models.dev + LiteLLM agree" },
+    "claude-sonnet-5-5": { input: 2.0, output: 10.0, cacheRead: 0.1, cacheCreation: 2.5, note: "Cache read 0.05x ($0.10): claude.com/pricing 2026-10-07 ('Read: $0.10 / MTok') and the platform.claude.com pricing page's prompt-caching section agree; that page's model table still shows $0.20; LiteLLM agrees at 0.1, models.dev still 0.2. Was 0.2 (verified 2026-09-29)" },
     "claude-sonnet-5": { input: 2.0, output: 10.0, cacheRead: 0.2, cacheCreation: 2.5 },
     // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-sonnet-4-6": { input: 3.0, output: 15.0, cacheRead: 0.3, cacheCreation: 3.75 },

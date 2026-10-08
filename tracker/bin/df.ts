@@ -36,6 +36,9 @@
  * transcripts. It never reads or transmits your code or prompts.
  */
 import { hostname, homedir } from "node:os";
+import { existsSync, readdirSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { join } from "node:path";
 import { pair, githubOnboard, logout, setupToken } from "../src/auth.js";
 import { syncOnce, TRACKER_VERSION, formatAccountDeletedMessage } from "../src/sync.js";
 import { restore } from "../src/restore.js";
@@ -1128,10 +1131,12 @@ async function status(): Promise<void> {
   ui.blank();
 }
 
-function printHelp(): void {
-  console.log(
-    [
-      `deploy-forward v${TRACKER_VERSION} - Deploy Forward tracker`,
+/** `ext` carries the optional extension's own help lines (see loadExtension() /
+ * CliExtension above) — appended verbatim after the built-in command list, present
+ * only when its extension module is found on disk. */
+function printHelp(ext: CliExtension | null): void {
+  const lines = [
+    `deploy-forward v${TRACKER_VERSION} - Deploy Forward tracker`,
       "",
       "  npx --yes deploy-forward@latest",
       "      first run: create or link your account; after: dashboard + live monitor",
@@ -1215,11 +1220,17 @@ function printHelp(): void {
       "      cancel a pending account deletion (30-day grace period)",
       "  npx --yes deploy-forward@latest uninstall",
       "      remove the Claude Code hooks",
-      "",
-      "  No prior npm install needed - npx fetches and runs the latest version.",
-      "  Tracks usage metadata only - never your code or prompts.",
-    ].join("\n"),
+  ];
+  // The optional extension's own help lines (see loadExtension() / CliExtension above),
+  // appended verbatim — present only when its extension module is found on disk, absent
+  // without a trace otherwise (this file never names what such an extension might be).
+  if (ext?.help) lines.push(...ext.help);
+  lines.push(
+    "",
+    "  No prior npm install needed - npx fetches and runs the latest version.",
+    "  Tracks usage metadata only - never your code or prompts.",
   );
+  console.log(lines.join("\n"));
 }
 
 /**
@@ -1315,7 +1326,64 @@ function runConfig(): void {
   process.exitCode = 1;
 }
 
+/**
+ * The optional-extension seam: a separately distributed CLI surface can graft a help
+ * block and a subcommand table onto this tracker at runtime, without this file naming
+ * which one. A satisfying module exports `help` (lines printHelp() appends verbatim)
+ * and/or `commands` (a subcommand dispatch table, keyed by whatever command names the
+ * extension itself owns). This file never imports such a module statically and never
+ * writes out its filename as a literal: see loadExtension() below for how it is found.
+ */
+interface CliExtension {
+  help?: string[];
+  commands?: Record<string, (argv: string[]) => Promise<number>>;
+}
+
+/**
+ * Finds the one extension module, if any, by a GENERIC NAMING CONVENTION rather
+ * than a hardcoded filename: anything directly under src/ whose name ends in "Entry.js"
+ * (the built/npm-published shape) or "Entry.ts" (the tsx dev-run shape) is it. This file
+ * never spells out which extension that is — doing so would put that name in df.ts's own
+ * source, and this file ships verbatim to the public export, which must carry no trace of
+ * any extension, not even its name. Directory discovery, rather than a literal
+ * `new URL("../src/<name>.js", ...)`, is what makes that possible while still resolving
+ * the real module at runtime.
+ *
+ * DF_EXTENSION_PATH overrides the discovered path for tests only (e.g. a path that does
+ * not exist, to exercise the "no extension present" branch deterministically instead of
+ * depending on whatever happens to be checked out); production never sets it.
+ */
+function resolveExtensionUrl(): URL | null {
+  const override = process.env.DF_EXTENSION_PATH;
+  if (override) return existsSync(override) ? pathToFileURL(override) : null;
+  const srcDir = fileURLToPath(new URL("../src/", import.meta.url));
+  let entries: string[];
+  try {
+    entries = readdirSync(srcDir);
+  } catch {
+    return null;
+  }
+  const picked = entries.find((f) => f.endsWith("Entry.js")) ?? entries.find((f) => f.endsWith("Entry.ts"));
+  return picked ? pathToFileURL(join(srcDir, picked)) : null;
+}
+
+/** Loads the extension module if present; absent or broken both mean "no extension" —
+ * a corrupt or half-installed extension file must never crash the open tracker it is
+ * grafted onto. The import specifier is a runtime URL, never a literal string, which is
+ * why this compiles cleanly under `tsc --noEmit` whether or not any extension exists on
+ * disk (the public export's typecheck run has none at all). */
+async function loadExtension(): Promise<CliExtension | null> {
+  const url = resolveExtensionUrl();
+  if (!url) return null;
+  try {
+    return (await import(url.href)) as CliExtension;
+  } catch {
+    return null;
+  }
+}
+
 async function main(): Promise<void> {
+  const ext = await loadExtension();
   const cmd = process.argv[2];
   switch (cmd) {
     case "pair":
@@ -1494,7 +1562,7 @@ async function main(): Promise<void> {
     case "--help":
     case "-help": // single-hyphen tolerance: npm passes it through with a warning
     case "-h":
-      printHelp();
+      printHelp(ext);
       break;
     case "version":
     case "--version":
@@ -1507,8 +1575,17 @@ async function main(): Promise<void> {
       // onboarding ceremony (auth prompts from a mistyped `-hlep` reads as hostile).
       // Only the BARE command earns the ceremony; anything else gets help + exit 1.
       if (cmd !== undefined) {
+        // The optional extension's own subcommand table (see loadExtension() above) —
+        // checked BEFORE the unknown-command error so a grafted-on command, when its
+        // extension file is present, dispatches exactly like a built-in case would,
+        // while an absent extension falls straight through to the same honest
+        // "unknown command" this file has always printed.
+        if (ext?.commands && cmd in ext.commands) {
+          process.exitCode = await ext.commands[cmd](process.argv.slice(3));
+          break;
+        }
         console.error(`  x Unknown command or flag: ${cmd}\n`);
-        printHelp();
+        printHelp(ext);
         process.exitCode = 1;
         break;
       }
