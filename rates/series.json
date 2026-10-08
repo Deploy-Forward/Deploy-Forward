@@ -345,6 +345,13 @@
     "output": 10,
     "cacheRead": 0.2,
     "cacheCreation": 2.5
+   },
+   {
+    "d": "2026-10-08",
+    "input": 2,
+    "output": 10,
+    "cacheRead": 0.1,
+    "cacheCreation": 2.5
    }
   ],
   "gpt-6-luna": [
@@ -474,5 +481,5 @@
    }
   ]
  },
- "updatedAt": "2026-10-07T19:21:15.175Z"
+ "updatedAt": "2026-10-08T01:53:53.540Z"
 }
