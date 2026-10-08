@@ -479,7 +479,16 @@
     "cacheRead": 1.25,
     "cacheCreation": 12.5
    }
+  ],
+  "claude-haiku-5-5": [
+   {
+    "d": "2026-10-08",
+    "input": 0.1,
+    "output": 0.5,
+    "cacheRead": 0.01,
+    "cacheCreation": 0.125
+   }
   ]
  },
- "updatedAt": "2026-10-08T01:53:53.540Z"
+ "updatedAt": "2026-10-08T02:11:58.196Z"
 }
