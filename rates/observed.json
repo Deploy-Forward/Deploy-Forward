@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-10-13T19:52:19.803Z",
+  "generatedAt": "2026-10-14T18:01:21.577Z",
   "note": "Automated multi-source observation. The canonical table remains hand-verified against vendor pages; per-row `agreement` states how the sources relate. Never treat an aggregator value as vendor truth.",
   "canonicalTableVersion": 3,
   "sources": {
     "litellm": {
       "url": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
-      "fetchedAt": "2026-10-13T19:52:19.803Z"
+      "fetchedAt": "2026-10-14T18:01:21.577Z"
     },
     "modelsDev": {
       "url": "https://models.dev/api.json",
-      "fetchedAt": "2026-10-13T19:52:19.803Z"
+      "fetchedAt": "2026-10-14T18:01:21.577Z"
     }
   },
   "models": {
