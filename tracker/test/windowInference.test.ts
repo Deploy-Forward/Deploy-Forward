@@ -42,9 +42,12 @@ test("windowForSession: vendor-stated beats the registry, verbatim", () => {
 test("windowForSession: registry resolution for a session inside its base window", () => {
   const w = windowForSession({ occupancyTokens: 150_000, model: "claude-opus-4-8" });
   assert.deepEqual(w, { tokens: 200_000, provenance: "registry" });
-  // Non-Claude too: pi on gpt-5.4-mini (registry 1,050,000).
+  // Non-Claude too: pi on gpt-5.4-mini. Registry 400,000 since the 2026-11-01 rebase
+  // (developers.openai.com/api/docs/models/gpt-5.4-mini: "Context window 400,000 total
+  // tokens"); the 1,050,000 this test pinned before was the gpt-5.4 family figure, wrongly
+  // copied onto the mini.
   const w2 = windowForSession({ occupancyTokens: 7_648, model: "gpt-5.4-mini" });
-  assert.deepEqual(w2, { tokens: 1_050_000, provenance: "registry" });
+  assert.deepEqual(w2, { tokens: 400_000, provenance: "registry" });
 });
 
 test("windowForSession: THE FIELD CASE — bare-id Claude beyond 200K infers the 1M tier", () => {

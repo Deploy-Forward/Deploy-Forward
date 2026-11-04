@@ -78,6 +78,21 @@ test("every value in CONTEXT_WINDOWS is a positive integer", () => {
   }
 });
 
+// 2026-11-01 rebase pins. Expected values come from the vendor's own model page where one
+// states a window, else from the native models.dev row read that day — never from the
+// registry itself.
+test("2026-11-01 rebase: new ids have windows and gpt-5.4-mini's wrong window is corrected", () => {
+  // developers.openai.com/api/docs/models/gpt-5.4-mini (read 2026-11-01): "Context window
+  // 400,000 total tokens; max output 128,000". The registry carried 1,050,000 (a
+  // gpt-5.4-family copy) — a 2.6x overstatement of the window.
+  assert.equal(contextWindowForModel("gpt-5.4-mini"), 400_000);
+  assert.equal(contextWindowForModel("gpt-6.1-terra"), 1_050_000); // models.dev openai, 2026-11-01
+  assert.equal(contextWindowForModel("gemini-4-argon"), 1_048_576); // models.dev google, 2026-11-01
+  assert.equal(contextWindowForModel("kimi-k3.1-pro"), 1_048_576); // platform.kimi.ai 2026-11-01: K3 series 1,048,576
+  assert.equal(contextWindowForModel("glm-5.3"), 1_000_000); // models.dev zai, 2026-11-01
+  assert.equal(contextWindowForModel("gpt-5.3-codex"), 400_000); // models.dev openai, 2026-11-01
+});
+
 test("every model id the CLI prices (PRICES) also has a resolvable context window", () => {
   // The surface that prices a model must also know its window -- a model that shows up
   // in `usage --cost` but silently has no window would be the context-capacity analog

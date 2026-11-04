@@ -40,6 +40,14 @@
  * contextWindows.test.ts pins claude-opus-4-8's base window at 200_000 and its own
  * comments describe "the opus family's default window" as 200_000 generally, matching
  * Anthropic's documented base/non-beta context size.
+ *
+ * 2026-11-01 rebase: rows added or corrected that day cite their source per entry --
+ * the vendor's own model page where it states a window, else the native models.dev
+ * row (limit.context) read that day. The platform.claude.com pricing page now says
+ * Claude 4.6+ "include the full 1M token context window at standard pricing"; the
+ * Anthropic base rows are deliberately NOT changed here (THE [1m] RULE above, pinned by
+ * tracker/test/contextWindows.test.ts) -- that is a ruling for the owner, recorded in
+ * the rebase PR, not a silent edit.
  */
 import { normalizeModelId } from "./pricing.js";
 
@@ -117,9 +125,29 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   // current "-0905" / "-thinking" / "-k2.5" suffix variants agree at 262,144, used
   // as the family value.
   "kimi-k2": 262_144,
+  // Moonshot K3 series (platform.kimi.ai model page read 2026-11-01: "1,048,576" context
+  // for kimi-k3 / kimi-k3.1-pro; the pricing table there is JS-rendered and came back
+  // empty, so the RATE rows stay VERIFY -- the window figure is from the model page).
+  // kimi-k2.7-code / kimi-k2.6: models.dev moonshotai limit.context 262,144 (2026-11-01).
+  "kimi-k3.1-pro": 1_048_576,
+  "kimi-k3.1-pro-highspeed": 1_048_576,
+  "kimi-k3": 1_048_576,
+  "kimi-k2.7-code": 262_144,
+  "kimi-k2.6": 262_144,
   // VERIFY-family: no exact "glm-4.6" key in the catalog (2026-07-17 fetch); the
   // "zai/glm-4.6" and "vercel_ai_gateway/zai/glm-4.6" entries agree at 200,000.
   "glm-4.6": 200_000,
+  // Zhipu GLM 4.7 / 5.x: models.dev zai limit.context (2026-11-01 fetch). Explicit rows so
+  // glm-5.3-flash / -flashx never fall through the prefix rule to a sibling, and so the
+  // 5.1 / 5 / 4.7 rows (200,000 / 204,800) are not overstated by the 1M 5.2+ figure.
+  "glm-5.3": 1_000_000,
+  "glm-5.3-flash": 1_000_000,
+  "glm-5.3-flashx": 1_000_000,
+  "glm-5.2": 1_000_000,
+  "glm-5.1": 200_000,
+  "glm-5": 204_800,
+  "glm-4.7": 204_800,
+  "glm-4.7-flashx": 200_000,
   // Catalog-sourced: max_input_tokens 272,000 (2026-07-17 fetch).
   "gpt-5": 272_000,
   // Catalog-sourced: max_input_tokens 1,050,000 (2026-07-17 fetch).
@@ -131,8 +159,22 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   "gpt-5.5-cyber": 1_050_000,
   "gpt-5-mini": 272_000,
   "gpt-5.4": 1_050_000,
-  // Catalog-sourced: max_input_tokens 1,050,000 (2026-07-17 fetch).
-  "gpt-5.4-mini": 1_050_000,
+  // gpt-5.4-mini: developers.openai.com/api/docs/models/gpt-5.4-mini read 2026-11-01:
+  // "Context window 400,000 total tokens; max output 128,000". This row carried
+  // 1,050,000 (typed from the gpt-5.4 family on 2026-07-17) -- a 2.6x overstatement,
+  // corrected 2026-11-01.
+  "gpt-5.4-mini": 400_000,
+  // gpt-5 generation rows added 2026-11-01 (priced that day from the vendor pricing page):
+  // models.dev openai limit.context, 2026-11-01 fetch. Explicit so gpt-5.3-codex and
+  // gpt-5-nano/-pro never fall through the prefix rule to the 272K "gpt-5" row.
+  "gpt-5-nano": 400_000,
+  "gpt-5-pro": 400_000,
+  "gpt-5.1": 400_000,
+  "gpt-5.2": 400_000,
+  "gpt-5.3-codex": 400_000,
+  "gpt-5.4-nano": 400_000,
+  "gpt-5.4-pro": 1_050_000,
+  "gpt-5.5-pro": 1_050_000,
   // gpt-5.6 family: models.dev limit.context 1,050,000 for all variants (2026-08-15
   // fetch; the vendor pricing page states only the 272K short/long tier threshold).
   "gpt-5.6": 1_050_000,
@@ -150,6 +192,15 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   // recorded disagreement as astra, models.dev used.
   "gpt-6-sol": 1_050_000,
   "gpt-6-luna": 1_050_000,
+  // gpt-6.1-terra: models.dev openai limit.context 1,050,000 (2026-11-01); LiteLLM 922,000
+  // -- the same recorded disagreement as astra, models.dev used.
+  "gpt-6.1-terra": 1_050_000,
+  // gpt-6-astra-law: no catalog entry anywhere (2026-11-01); typed from the gpt-6-astra
+  // family window -- VERIFY-family.
+  "gpt-6-astra-law": 1_050_000,
+  // gpt-6-rosalind: LiteLLM max_input_tokens 922,000 (2026-11-01); absent from models.dev
+  // (trusted-access model). The only catalog figure available, used as-is.
+  "gpt-6-rosalind": 922_000,
   // VERIFY-family: no exact "gemini-3-flash" key in the catalog (2026-07-17 fetch);
   // the "gemini-3-flash-preview" chat variant (1,048,576) is used as the family value.
   // Gemini 3.x flash family: models.dev limit.context 1,048,576 for every row (2026-09-29).
@@ -166,6 +217,17 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   // "-image" / "-image-preview" image-generation variants, which the catalog lists
   // at a much smaller 65,536.
   "gemini-3-pro": 1_048_576,
+  // Rows added 2026-11-01 (priced that day from ai.google.dev/gemini-api/docs/pricing):
+  // models.dev google limit.context 1,048,576 for every one of them (2026-11-01 fetch).
+  // gemini-3-flash-preview / gemini-3.1-pro-preview are the vendor's own ids (D1 ruling:
+  // a -preview id never borrows a family row, so each gets its own entry).
+  "gemini-4-argon": 1_048_576,
+  "gemini-3.1-pro-preview": 1_048_576,
+  "gemini-3.1-flash-lite": 1_048_576,
+  "gemini-3-flash-preview": 1_048_576,
+  "gemini-2.5-pro": 1_048_576,
+  "gemini-2.5-flash": 1_048_576,
+  "gemini-2.5-flash-lite": 1_048_576,
 
   // --- xAI Grok CLI families (priced since P1; a priced id must have a window --
   // tracker/test/contextWindows.test.ts enforces that invariant). ---
@@ -182,6 +244,11 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   "grok-4.5": 500_000,
   // Catalog-sourced: "xai/grok-4.3" max_input_tokens 1,000,000 (2026-08-07 fetch).
   "grok-4.3": 1_000_000,
+  // Vendor-sourced: docs.x.ai models page lists the grok-4.20-0309 trio at "1M" context
+  // (2026-11-01 read, same page as their price rows); models.dev xai says 1,000,000.
+  "grok-4.20-0309-reasoning": 1_000_000,
+  "grok-4.20-0309-non-reasoning": 1_000_000,
+  "grok-4.20-multi-agent-0309": 1_000_000,
   // VERIFY-family: no "grok-build" key in the catalog (2026-08-07 fetch). xAI's own
   // registry aliases it as grok-code-fast-1 (docs.x.ai 2026-07-10, see the pricing
   // table's note), whose catalog window is 256,000 -- used as the family value.

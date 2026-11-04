@@ -79,6 +79,19 @@ test("an acknowledgment never covers an id that is priced via fallback (that is 
   assert.deepEqual(r.acknowledged, []);
 });
 
+// 2026-11-01 rebase: Moonshot shipped kimi-k3.1-pro on 2026-10-23 and Zhipu glm-5.3 on
+// 2026-08-14, both native-vendor rows on models.dev, and neither tripped the alarm — the
+// NATIVE list only knew anthropic/openai/xai/google. Every vendor the table prices is a
+// vendor whose releases the alarm must see.
+test("moonshotai and zai are native vendors: a new Kimi or GLM release is flagged", () => {
+  const catalog = {
+    moonshotai: { models: { "kimi-k3.1-pro": model("kimi-k3.1-pro", "2026-10-23", { input: 2, output: 10, cache_read: 0.2 }) } },
+    zai: { models: { "glm-5.3": model("glm-5.3", "2026-08-14", { input: 1.4, output: 4.4, cache_read: 0.26 }) } },
+  };
+  const flags = findUnpricedIds(catalog, RATES, new Date("2026-11-01T12:00:00Z"));
+  assert.deepEqual(flags.map((f) => f.id), ["kimi-k3.1-pro", "glm-5.3"]);
+});
+
 test("flags sort newest release first", () => {
   const catalog = {
     openai: {

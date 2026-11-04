@@ -29,14 +29,23 @@ function candidateKeys(id) {
   return [id, `anthropic/${id}`, `openai/${id}`, `xai/${id}`, `gemini/${id}`, `x-ai/${id}`];
 }
 
-/** Exact key, else the id's own dated variants (id + "-" + digits), never a looser guess. */
-export function lookupCatalog(catalog, id) {
+/** Exact key, else the id's own dated variants (id + "-" + digits), never a looser guess.
+ *
+ * A dashed-digit remainder is a dated pin of `id` ONLY when no LONGER priced id claims the
+ * key: LiteLLM spells glm-5.2 as "glm-5-2", which otherwise reads as a pin of glm-5 and
+ * reports glm-5 as drifting against glm-5.2's rates (2026-11-01, exported-tree run).
+ * `ids` is the full list of priced ids (defaults to the canonical table; tests pass it). */
+export function lookupCatalog(catalog, id, ids = Object.keys(PRICING.models)) {
   for (const k of candidateKeys(id)) {
     if (catalog[k]) return { key: k, entry: catalog[k] };
   }
+  const claimedByLonger = (base) =>
+    ids.some((o) => o !== id && o.length > id.length && (base === o || base.startsWith(`${o}-`) || base.startsWith(`${o}.`)));
   const dated = Object.keys(catalog).filter((k) => {
     const base = k.replace(/^[a-z-]+\//, "");
-    return base.startsWith(`${id}-`) && /^\d/.test(base.slice(id.length + 1));
+    if (!(base.startsWith(`${id}-`) && /^\d/.test(base.slice(id.length + 1)))) return false;
+    const dotted = id + base.slice(id.length).replace(/-(?=\d)/g, "."); // "glm-5" + "-2" -> "glm-5.2"
+    return !claimedByLonger(base) && !claimedByLonger(dotted);
   });
   if (dated.length > 0) {
     const k = dated.sort().at(-1); // newest dated variant

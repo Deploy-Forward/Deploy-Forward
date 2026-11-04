@@ -24,7 +24,10 @@
 import { PRICING, priceForModel } from "../usage-core/src/pricing.ts";
 
 export const MODELS_DEV_URL = "https://models.dev/api.json";
-export const NATIVE_PROVIDERS = ["anthropic", "openai", "xai", "google"];
+// Every vendor the table prices is a vendor whose releases the alarm must see: Moonshot
+// (kimi-k3.1-pro, 2026-10-23) and Zhipu (glm-5.3, 2026-08-14) shipped without a flag
+// because this list did not know them -- added 2026-11-01.
+export const NATIVE_PROVIDERS = ["anthropic", "openai", "xai", "google", "moonshotai", "zai"];
 export const RECENT_DAYS = 120;
 
 /** Non-text products the table never prices: image/video/audio/embedding/live. */
@@ -81,13 +84,13 @@ export function findUnpricedIds(catalog, rates = PRICING.models, today = new Dat
 export const ACKNOWLEDGED = [
   {
     id: "gpt-daybreak-blue-latest",
-    recheckBy: "2026-10-30",
-    reason: "developers.openai.com/api/docs/pricing 2026-09-30: 'Our latest Daybreak models' under Cyber models, no rates listed (public issue #7)",
+    recheckBy: "2026-12-31",
+    reason: "developers.openai.com/api/docs/pricing 2026-11-01: Daybreak still absent from the page (was 'Our latest Daybreak models' under Cyber models with no rates on 2026-09-30; public issue #7)",
   },
   {
     id: "gpt-daybreak-red-latest",
-    recheckBy: "2026-10-30",
-    reason: "developers.openai.com/api/docs/pricing 2026-09-30: 'Our latest Daybreak models' under Cyber models, no rates listed (public issue #7)",
+    recheckBy: "2026-12-31",
+    reason: "developers.openai.com/api/docs/pricing 2026-11-01: Daybreak still absent from the page (was 'Our latest Daybreak models' under Cyber models with no rates on 2026-09-30; public issue #7)",
   },
 ];
 

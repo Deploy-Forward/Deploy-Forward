@@ -428,8 +428,12 @@ test("-preview variants never borrow the family row (D1 ruling, 2026-07-23)", ()
   // It stays unpriced until a real row lands; a family-row dollar would be an
   // estimate presented as fact.
   assert.equal(priceForModel("gemini-3-pro-preview"), null);
-  assert.equal(priceForModel("gemini-3-flash-preview"), null);
   assert.equal(priceForModel("gemini-3-pro-preview-0611"), null, "dated preview builds too");
+  // 2026-11-01: a real row for gemini-3-flash-preview landed (ai.google.dev lists it as the
+  // vendor's own id). The ruling is unchanged -- it prices through ITS OWN exact key, not
+  // through the bare gemini-3-flash family row -- and a -preview id with no row still refuses.
+  assert.equal(priceForModel("gemini-3-flash-preview"), PRICES["gemini-3-flash-preview"]);
+  assert.equal(priceForModel("gemini-3.5-flash-preview"), null, "no row -> no dollar, even with a priced 3.5-flash sibling");
   const t = { input: 1_000_000, output: 1_000_000, cacheRead: 0, cacheCreation: 0 };
   assert.equal(estimateCostUsd(t, "gemini-3-pro-preview"), null, "spend refuses, never a guessed dollar");
   // Non-preview suffix tolerance is untouched.

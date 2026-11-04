@@ -54,10 +54,13 @@ export interface PricingTable {
  * cache-hit, and 5m cache-write columns). Multipliers per that page: 5m write 1.25x
  * input, cache read 0.1x input — EXCEPT Fable 5.1 / Mythos 5.1, where cache reads
  * are 0.025x ($0.25). The 1h-TTL write (2x) is NOT modeled anywhere in this table.
- * Rebase ledger: 2026-08-29 (Marco: "rebase the price-tracking"), prior 2026-08-14.
+ * Rebase ledger: 2026-11-01 (Marco: "rebase to the latest prices and models" — every
+ * Anthropic row re-read verbatim on that page, all unchanged; OpenAI, Google, xAI and
+ * Zhipu pages re-read the same day, see the per-vendor blocks), 2026-08-29 (Marco:
+ * "rebase the price-tracking"), prior 2026-08-14.
  */
 export const PRICING: PricingTable = {
-  version: 3,
+  version: 4,
   currency: "USD",
   per: 1_000_000,
   models: {
@@ -132,9 +135,54 @@ export const PRICING: PricingTable = {
     // don't bill cache writes separately get cacheCreation = input rate (cache-write
     // tokens bill as ordinary input there), NOT an Anthropic-style 1.25x. VERIFY all
     // against the vendor's own pricing page before treating any number as authoritative.
+    // Moonshot (2026-11-01 rebase): platform.kimi.ai/docs/pricing/chat renders its price
+    // tables client-side; the page fetched that day carried EMPTY tables, so no Kimi row
+    // has a vendor citation yet and every one stays VERIFY (aggregator-typed from the
+    // native moonshotai rows on models.dev, LiteLLM agreeing where it lists the id). What
+    // the page does state verbatim: K3 series context 1,048,576; K2 series 262,144; "K2
+    // series models will no longer be available to newly registered users from 2026-10-31"
+    // and all K2 models retire by end of December 2026. The -highspeed variants are speed
+    // tiers of the same models (billing modes, NOT modeled, same policy as fast mode).
     "kimi-k2": { input: 0.6, output: 2.5, cacheRead: 0.15, cacheCreation: 0.6, note: "VERIFY" },
-    "glm-4.6": { input: 0.6, output: 2.2, cacheRead: 0.11, cacheCreation: 0.6, note: "VERIFY" },
-    "gpt-5": { input: 1.25, output: 10.0, cacheRead: 0.125, cacheCreation: 1.25, note: "VERIFY" },
+    "kimi-k3.1-pro": { input: 2.0, output: 10.0, cacheRead: 0.2, cacheCreation: 2.0, note: "VERIFY" },
+    // kimi-k3.1-pro-highspeed (models.dev moonshotai, released 2026-10-23, 4/20/0.2): caught
+    // by the exported-tree unpriced check on 2026-11-01 -- WITHOUT this row the resolver
+    // priced it at kimi-k3's 3/15, because "kimi-k3" + ".1-pro-highspeed" reads as a
+    // version-pinned remainder (dot, then a digit). Its own row ends that; VERIFY until the
+    // Moonshot pricing page renders.
+    "kimi-k3.1-pro-highspeed": { input: 4.0, output: 20.0, cacheRead: 0.2, cacheCreation: 4.0, note: "VERIFY" },
+    "kimi-k3": { input: 3.0, output: 15.0, cacheRead: 0.3, cacheCreation: 3.0, note: "VERIFY" },
+    "kimi-k2.7-code": { input: 0.95, output: 4.0, cacheRead: 0.19, cacheCreation: 0.95, note: "VERIFY" },
+    "kimi-k2.6": { input: 0.95, output: 4.0, cacheRead: 0.16, cacheCreation: 0.95, note: "VERIFY" },
+    // Zhipu (docs.z.ai/guides/overview/pricing, read 2026-11-01): input / cached input /
+    // output verbatim; "Cached Input Storage: Limited-time Free" with no end date, so no
+    // per-token write charge -> cacheCreation = input. glm-4.6 graduates VERIFY on this read
+    // (unchanged 0.6/2.2/0.11). GLM-5-turbo / 5v-turbo are not on the page and stay out.
+    "glm-5.3": { input: 1.4, output: 4.4, cacheRead: 0.26, cacheCreation: 1.4, note: "docs.z.ai/guides/overview/pricing 2026-11-01; cached storage 'Limited-time Free' -> cacheCreation = input" },
+    "glm-5.3-flash": { input: 0.15, output: 0.5, cacheRead: 0.03, cacheCreation: 0.15, note: "docs.z.ai/guides/overview/pricing 2026-11-01; cached storage 'Limited-time Free' -> cacheCreation = input" },
+    "glm-5.3-flashx": { input: 0.37, output: 1.25, cacheRead: 0.075, cacheCreation: 0.37, note: "docs.z.ai/guides/overview/pricing 2026-11-01; cached storage 'Limited-time Free' -> cacheCreation = input" },
+    "glm-5.2": { input: 1.4, output: 4.4, cacheRead: 0.26, cacheCreation: 1.4, note: "docs.z.ai/guides/overview/pricing 2026-11-01; cached storage 'Limited-time Free' -> cacheCreation = input" },
+    "glm-5.1": { input: 1.4, output: 4.4, cacheRead: 0.26, cacheCreation: 1.4, note: "docs.z.ai/guides/overview/pricing 2026-11-01; cached storage 'Limited-time Free' -> cacheCreation = input" },
+    "glm-5": { input: 1.0, output: 3.2, cacheRead: 0.2, cacheCreation: 1.0, note: "docs.z.ai/guides/overview/pricing 2026-11-01; cached storage 'Limited-time Free' -> cacheCreation = input" },
+    "glm-4.7": { input: 0.6, output: 2.2, cacheRead: 0.11, cacheCreation: 0.6, note: "docs.z.ai/guides/overview/pricing 2026-11-01; cached storage 'Limited-time Free' -> cacheCreation = input" },
+    "glm-4.7-flashx": { input: 0.07, output: 0.4, cacheRead: 0.01, cacheCreation: 0.07, note: "docs.z.ai/guides/overview/pricing 2026-11-01; cached storage 'Limited-time Free' -> cacheCreation = input" },
+    "glm-4.6": { input: 0.6, output: 2.2, cacheRead: 0.11, cacheCreation: 0.6, note: "docs.z.ai/guides/overview/pricing 2026-11-01 (graduated VERIFY, rates unchanged); cached storage 'Limited-time Free' -> cacheCreation = input" },
+    // gpt-5 generation (developers.openai.com/api/docs/pricing, read 2026-11-01): the text-token
+    // table verbatim. gpt-5 graduates VERIFY on this read (unchanged 1.25/10/0.125). No
+    // cache-write price is shown for any of these -> cacheCreation = input. The -pro rows show
+    // a dash for cached input (no caching): cacheRead = input, so a cache-read token can never
+    // bill below input there. gpt-5.3-codex is the Codex-specialized row (same figures as
+    // gpt-5.2); gpt-5.3-codex-spark, gpt-5.2-codex, gpt-5.1-codex(-mini), gpt-5-codex are NOT
+    // on the page and stay unpriced rather than borrowed.
+    "gpt-5": { input: 1.25, output: 10.0, cacheRead: 0.125, cacheCreation: 1.25, note: "developers.openai.com/api/docs/pricing 2026-11-01 (graduated VERIFY, rates unchanged); no separate cache-write charge, cacheCreation = input" },
+    "gpt-5-nano": { input: 0.05, output: 0.4, cacheRead: 0.005, cacheCreation: 0.05, note: "developers.openai.com/api/docs/pricing 2026-11-01; no separate cache-write charge, cacheCreation = input" },
+    "gpt-5-pro": { input: 15.0, output: 120.0, cacheRead: 15.0, cacheCreation: 15.0, note: "developers.openai.com/api/docs/pricing 2026-11-01; cached input shown as a dash (no caching) -> cacheRead = cacheCreation = input" },
+    "gpt-5.1": { input: 1.25, output: 10.0, cacheRead: 0.125, cacheCreation: 1.25, note: "developers.openai.com/api/docs/pricing 2026-11-01; no separate cache-write charge, cacheCreation = input" },
+    "gpt-5.2": { input: 1.75, output: 14.0, cacheRead: 0.175, cacheCreation: 1.75, note: "developers.openai.com/api/docs/pricing 2026-11-01; no separate cache-write charge, cacheCreation = input" },
+    "gpt-5.3-codex": { input: 1.75, output: 14.0, cacheRead: 0.175, cacheCreation: 1.75, note: "developers.openai.com/api/docs/pricing 2026-11-01 (Specialized models: Codex); no separate cache-write charge, cacheCreation = input" },
+    "gpt-5.4-nano": { input: 0.2, output: 1.25, cacheRead: 0.02, cacheCreation: 0.2, note: "developers.openai.com/api/docs/pricing 2026-11-01; no separate cache-write charge, cacheCreation = input" },
+    "gpt-5.4-pro": { input: 30.0, output: 180.0, cacheRead: 30.0, cacheCreation: 30.0, note: "developers.openai.com/api/docs/pricing 2026-11-01 (<272K tier); cached input shown as a dash (no caching) -> cacheRead = cacheCreation = input; long-context (>=272K) tier 60/270 NOT modeled" },
+    "gpt-5.5-pro": { input: 30.0, output: 180.0, cacheRead: 30.0, cacheCreation: 30.0, note: "developers.openai.com/api/docs/pricing 2026-11-01 (<272K tier); cached input shown as a dash (no caching) -> cacheRead = cacheCreation = input; long-context (>=272K) tier 60/270 NOT modeled" },
     // gpt-5.5 / gpt-5-mini (developers.openai.com/api/docs/pricing 2026-09-29; models.dev agrees): seen in local Codex corpora (12 records
     // of gpt-5.5; 32K tokens of gpt-5-mini) and unpriced until now. Vendor page shows a dash
     // for cache writes on both (no separate charge) -> cacheCreation = input. gpt-5.5's
@@ -179,21 +227,54 @@ export const PRICING: PricingTable = {
     // gpt-6.1-sol (developers.openai.com/api/docs/pricing 2026-09-29; released 2026-09-29 -- caught the same day by the unpriced-id alarm
     // on its first live run; models.dev agrees exactly). Cache read is 0.05x here (0.10),
     // not the family's 0.1x. Long-context tier 4/0.2/5/15 NOT modeled.
-    "gpt-6.1-sol": { input: 2.0, output: 10.0, cacheRead: 0.1, cacheCreation: 2.5, note: "developers.openai.com/api/docs/pricing 2026-09-29; cache read 0.05x (0.10); cache writes 2.50 (1.25x input); long-context (>=272K) tier 4/0.2/5/15 NOT modeled" },
-    "gpt-6-astra": { input: 10.0, output: 50.0, cacheRead: 1.0, cacheCreation: 12.5, note: "re-verified unchanged developers.openai.com/api/docs/pricing 2026-09-29; developers.openai.com/api/docs/pricing 2026-09-10 (Codex's frontier model since 2026-09; models.dev + LiteLLM native agree); cache writes billed separately at 12.5 (1.25x input); long-context tier 20/2/25/75 NOT modeled; contextWindows 1,050,000 per models.dev (vendor page states no threshold; LiteLLM says 922,000 -- disagreement noted, models.dev used)" },
-    // Gemini 3.x flash family (ai.google.dev/gemini-api/docs/pricing 2026-09-29; models.dev agrees on every row). Gemini CLI is a
-    // supported harness, so these ids reach real corpora. Google bills context caching by
-    // storage time, not per written token -> cacheCreation = input. 3.6/3.7/3.8-flash and
-    // the -latest aliases carry a PUBLISHED increase on 2027-01-01 (0.75/3.75 -> 1.50/7.50):
-    // held as a dated interval on the server timeline, never pre-applied in this table.
-    "gemini-3.8-flash": { input: 0.75, output: 3.75, cacheRead: 0.075, cacheCreation: 0.75, note: "ai.google.dev/gemini-api/docs/pricing 2026-09-29; context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge); PROMOTIONAL: vendor lists 0.75/3.75/0.075 through 2026-12-31 and 1.50/7.50/0.15 from 2027-01-01 -- the increase is entered as a dated interval in the server timeline (ANNOUNCED_REPRICES), never pre-applied here; re-verify before 2027-01-01" },
-    "gemini-3.7-flash": { input: 0.75, output: 3.75, cacheRead: 0.075, cacheCreation: 0.75, note: "ai.google.dev/gemini-api/docs/pricing 2026-09-29; context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge); PROMOTIONAL: vendor lists 0.75/3.75/0.075 through 2026-12-31 and 1.50/7.50/0.15 from 2027-01-01 -- the increase is entered as a dated interval in the server timeline (ANNOUNCED_REPRICES), never pre-applied here; re-verify before 2027-01-01" },
-    "gemini-3.6-flash": { input: 0.75, output: 3.75, cacheRead: 0.075, cacheCreation: 0.75, note: "ai.google.dev/gemini-api/docs/pricing 2026-09-29; context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge); PROMOTIONAL: vendor lists 0.75/3.75/0.075 through 2026-12-31 and 1.50/7.50/0.15 from 2027-01-01 -- the increase is entered as a dated interval in the server timeline (ANNOUNCED_REPRICES), never pre-applied here; re-verify before 2027-01-01" },
-    "gemini-flash-latest": { input: 0.75, output: 3.75, cacheRead: 0.075, cacheCreation: 0.75, note: "alias of the current 3.x flash (models.dev 2026-09-29; vendor page lists no standalone row); context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge); PROMOTIONAL: vendor lists 0.75/3.75/0.075 through 2026-12-31 and 1.50/7.50/0.15 from 2027-01-01 -- the increase is entered as a dated interval in the server timeline (ANNOUNCED_REPRICES), never pre-applied here; re-verify before 2027-01-01" },
-    "gemini-3.5-flash": { input: 1.5, output: 9.0, cacheRead: 0.15, cacheCreation: 1.5, note: "ai.google.dev/gemini-api/docs/pricing 2026-09-29; context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge)" },
-    "gemini-3.5-flash-lite": { input: 0.3, output: 2.5, cacheRead: 0.03, cacheCreation: 0.3, note: "ai.google.dev/gemini-api/docs/pricing 2026-09-29; context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge)" },
-    "gemini-flash-lite-latest": { input: 0.3, output: 2.5, cacheRead: 0.03, cacheCreation: 0.3, note: "alias of 3.5-flash-lite (models.dev 2026-09-29; vendor page lists no standalone row); context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge)" },
-    "gemini-3-flash": { input: 0.5, output: 3.0, cacheRead: 0.05, cacheCreation: 0.5, note: "VERIFY" },
+    "gpt-6.1-sol": { input: 2.0, output: 10.0, cacheRead: 0.1, cacheCreation: 2.5, note: "re-verified unchanged developers.openai.com/api/docs/pricing 2026-11-01; developers.openai.com/api/docs/pricing 2026-09-29; cache read 0.05x (0.10); cache writes 2.50 (1.25x input); long-context (>=272K) tier 4/0.2/5/15 NOT modeled" },
+    // gpt-6.1-terra (released 2026-10-26; the unpriced-id alarm flagged it daily from
+    // 2026-10-28, public issue #7): developers.openai.com/api/docs/pricing 2026-11-01 verbatim
+    // $1.00 / $0.05 cached / $5.00, 30m cache write $1.25 (1.25x), 12h write $2.50 NOT modeled;
+    // models.dev + LiteLLM agree on the rates. Cache read 0.05x like 6.1-sol.
+    "gpt-6.1-terra": { input: 1.0, output: 5.0, cacheRead: 0.05, cacheCreation: 1.25, note: "developers.openai.com/api/docs/pricing 2026-11-01; cache read 0.05x (0.05); cache writes 1.25 (1.25x input, 30m TTL; 12h write 2.50 NOT modeled); long-context (>=272K) tier 2/0.1/2.5/7.5 NOT modeled" },
+    "gpt-6-astra": { input: 10.0, output: 50.0, cacheRead: 1.0, cacheCreation: 12.5, note: "re-verified unchanged developers.openai.com/api/docs/pricing 2026-11-01 and 2026-09-29; developers.openai.com/api/docs/pricing 2026-09-10 (Codex's frontier model since 2026-09; models.dev + LiteLLM native agree); cache writes billed separately at 12.5 (1.25x input); long-context tier 20/2/25/75 NOT modeled; contextWindows 1,050,000 per models.dev (vendor page states no threshold; LiteLLM says 922,000 -- disagreement noted, models.dev used)" },
+    // Vertical configurations of the gpt-6 family (developers.openai.com/api/docs/pricing
+    // 2026-11-01, their own sections): gpt-6-astra-law (Legal model configurations, "promotional
+    // pricing available at least through December 31, 2026", no cache-write price shown) and
+    // gpt-6-rosalind (Life sciences models, trusted access only; 30m cache write $18.75 = 1.25x,
+    // 12h $37.50 NOT modeled). gpt-rosalind-research / -discovery (5/25/0.5) are on the same
+    // page but no catalog states a context window for them, so they stay out of this table
+    // (a priced id without a window breaks the registry invariant) until one does.
+    "gpt-6-astra-law": { input: 10.0, output: 50.0, cacheRead: 1.0, cacheCreation: 10.0, note: "developers.openai.com/api/docs/pricing 2026-11-01 (Legal model configurations); no cache-write price shown -> cacheCreation = input; promotional at least through 2026-12-31 -- a later change is a reprice to observe, never pre-entered" },
+    "gpt-6-rosalind": { input: 15.0, output: 75.0, cacheRead: 1.5, cacheCreation: 18.75, note: "developers.openai.com/api/docs/pricing 2026-11-01 (Life sciences models, trusted access only); cache writes 18.75 (1.25x input, 30m TTL; 12h write 37.50 NOT modeled); long-context tier 30/3/112.5 NOT modeled" },
+    // Gemini (ai.google.dev/gemini-api/docs/pricing read 2026-09-29, re-read 2026-11-01; models.dev agrees on every
+    // row it lists). Gemini CLI is a supported harness, so these ids reach real corpora. Google bills
+    // context caching by storage time (per 1M tokens per hour), not per written token ->
+    // cacheCreation = input. 3.6/3.8-flash and the flash-latest alias carry a PUBLISHED increase
+    // on 2027-01-01 (0.75/3.75 -> 1.50/7.50): held as a dated interval on the server timeline,
+    // never pre-applied in this table.
+    // 2026-11-01 re-read: gemini-3.7-flash and gemini-3.5-flash are NO LONGER on the page (rows
+    // kept at their last verified rate, noted per row); the flash-latest / flash-lite-latest
+    // aliases are still not mentioned there (models.dev-sourced, as before); gemini-4-argon,
+    // 3.1-pro-preview, 3.1-flash-lite, 3-flash-preview and the 2.5 family were added from that
+    // read, and gemini-3-flash's VERIFY label retired against the -preview row. The >200k tier on
+    // the Pro rows and the audio-input rates on the Flash rows are NOT modeled -- same policy as
+    // every other long-context tier in this table.
+    "gemini-3.8-flash": { input: 0.75, output: 3.75, cacheRead: 0.075, cacheCreation: 0.75, note: "ai.google.dev/gemini-api/docs/pricing 2026-09-29, re-verified unchanged 2026-11-01; context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge); PROMOTIONAL: vendor lists 0.75/3.75/0.075 through 2026-12-31 and 1.50/7.50/0.15 from 2027-01-01 -- the increase is entered as a dated interval in the server timeline (ANNOUNCED_REPRICES), never pre-applied here; re-verify before 2027-01-01" },
+    "gemini-3.7-flash": { input: 0.75, output: 3.75, cacheRead: 0.075, cacheCreation: 0.75, note: "NOT on the vendor pricing page as of 2026-11-01 (3.6 and 3.8 remain; 3.7 and 3.5 were dropped from the page between 2026-09-29 and 2026-11-01) -- rate stands as last verified ai.google.dev/gemini-api/docs/pricing 2026-09-29, models.dev + LiteLLM still list it; context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge); PROMOTIONAL: vendor listed 0.75/3.75/0.075 through 2026-12-31 and 1.50/7.50/0.15 from 2027-01-01 -- the increase is entered as a dated interval in the server timeline (ANNOUNCED_REPRICES), never pre-applied here; re-verify before 2027-01-01" },
+    "gemini-3.6-flash": { input: 0.75, output: 3.75, cacheRead: 0.075, cacheCreation: 0.75, note: "ai.google.dev/gemini-api/docs/pricing 2026-09-29, re-verified unchanged 2026-11-01; context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge); PROMOTIONAL: vendor lists 0.75/3.75/0.075 through 2026-12-31 and 1.50/7.50/0.15 from 2027-01-01 -- the increase is entered as a dated interval in the server timeline (ANNOUNCED_REPRICES), never pre-applied here; re-verify before 2027-01-01" },
+    "gemini-flash-latest": { input: 0.75, output: 3.75, cacheRead: 0.075, cacheCreation: 0.75, note: "alias of the current 3.x flash (models.dev 2026-09-29; vendor page lists no standalone row, re-checked 2026-11-01: still not mentioned); context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge); PROMOTIONAL: vendor lists 0.75/3.75/0.075 through 2026-12-31 and 1.50/7.50/0.15 from 2027-01-01 -- the increase is entered as a dated interval in the server timeline (ANNOUNCED_REPRICES), never pre-applied here; re-verify before 2027-01-01" },
+    "gemini-3.5-flash": { input: 1.5, output: 9.0, cacheRead: 0.15, cacheCreation: 1.5, note: "NOT on the vendor pricing page as of 2026-11-01 (dropped between 2026-09-29 and 2026-11-01, as was 3.7-flash) -- rate stands as last verified ai.google.dev/gemini-api/docs/pricing 2026-09-29; models.dev still lists 1.5/9/0.15; context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge)" },
+    "gemini-3.5-flash-lite": { input: 0.3, output: 2.5, cacheRead: 0.03, cacheCreation: 0.3, note: "ai.google.dev/gemini-api/docs/pricing 2026-09-29, re-verified unchanged 2026-11-01 (0.30/2.50/0.03); context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge)" },
+    "gemini-flash-lite-latest": { input: 0.3, output: 2.5, cacheRead: 0.03, cacheCreation: 0.3, note: "alias of 3.5-flash-lite (models.dev 2026-09-29; vendor page lists no standalone row, re-checked 2026-11-01: still not mentioned); context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge)" },
+    "gemini-4-argon": { input: 2.0, output: 10.0, cacheRead: 0.1, cacheCreation: 2.0, note: "ai.google.dev/gemini-api/docs/pricing 2026-11-01 ('$2.00 through November 30, 2026; $4.00 starting December 1, 2026' input; 10.00 -> 20.00 output; 0.10 -> 0.20 caching); implicit caching only -> cacheCreation = input; PROMOTIONAL through 2026-11-30 -- the 2026-12-01 increase is entered as a dated interval in the server timeline (ANNOUNCED_REPRICES), never pre-applied here; re-verify before 2026-12-01; not on the Free tier; models.dev agrees (2/10/0.1)" },
+    "gemini-3.1-pro-preview": { input: 2.0, output: 12.0, cacheRead: 0.2, cacheCreation: 2.0, note: "ai.google.dev/gemini-api/docs/pricing 2026-11-01 (<=200k-token tier 2.00/12.00/0.20); >200k tier 4.00/18.00/0.40 NOT modeled; cache storage (4.50 per 1M token-hour) not modeled -> cacheCreation = input; the vendor's own id carries -preview (D1: exact key, never borrows the gemini-3-pro row)" },
+    "gemini-3.1-flash-lite": { input: 0.25, output: 1.5, cacheRead: 0.025, cacheCreation: 0.25, note: "ai.google.dev/gemini-api/docs/pricing 2026-11-01 (text/image/video 0.25/1.50/0.025; audio input 0.50 / caching 0.05 NOT modeled); cache storage billed per token-hour -> cacheCreation = input" },
+    "gemini-3-flash-preview": { input: 0.5, output: 3.0, cacheRead: 0.05, cacheCreation: 0.5, note: "ai.google.dev/gemini-api/docs/pricing 2026-11-01 (text/image/video 0.50/3.00/0.05; audio input 1.00 / caching 0.10 NOT modeled); cache storage billed per token-hour -> cacheCreation = input; the vendor's own id (D1: exact key wins over the bare gemini-3-flash row)" },
+    "gemini-2.5-pro": { input: 1.25, output: 10.0, cacheRead: 0.125, cacheCreation: 1.25, note: "ai.google.dev/gemini-api/docs/pricing 2026-11-01 (<=200k-token tier 1.25/10.00/0.125); >200k tier 2.50/15.00/0.25 NOT modeled; cache storage billed per token-hour -> cacheCreation = input" },
+    "gemini-2.5-flash": { input: 0.3, output: 2.5, cacheRead: 0.03, cacheCreation: 0.3, note: "ai.google.dev/gemini-api/docs/pricing 2026-11-01 (text/image/video 0.30/2.50/0.03; audio input 1.00 / caching 0.10 NOT modeled); cache storage billed per token-hour -> cacheCreation = input" },
+    "gemini-2.5-flash-lite": { input: 0.1, output: 0.4, cacheRead: 0.01, cacheCreation: 0.1, note: "ai.google.dev/gemini-api/docs/pricing 2026-11-01 (text/image/video 0.10/0.40/0.01; audio input 0.30 / caching 0.03 NOT modeled); cache storage billed per token-hour -> cacheCreation = input" },
+    "gemini-3-flash": { input: 0.5, output: 3.0, cacheRead: 0.05, cacheCreation: 0.5, note: "ai.google.dev/gemini-api/docs/pricing 2026-11-01 lists this family only as gemini-3-flash-preview, at 0.50/3.00/0.05 -- identical to this row, so the VERIFY label is retired; the bare id is kept for sessions that report it without the -preview suffix" },
+    // gemini-3-pro stays VERIFY: the 2026-11-01 page has no standalone text entry for it. The
+    // only pointer is Gemini 3 Pro Image's note that its text tokens are "priced the same as
+    // Gemini 3.1 Pro" (2.00/12.00/0.20 -- the figures this row already carries). A VERIFY label
+    // graduates only on a row of its own; an inference from an image model's footnote is not one.
     "gemini-3-pro": { input: 2.0, output: 12.0, cacheRead: 0.2, cacheCreation: 2.0, note: "VERIFY" },
 
     // xAI Grok CLI models (G2, docs/grok-capture-plan.md): rates decoded from docs.x.ai's
@@ -209,12 +290,21 @@ export const PRICING: PricingTable = {
     // grok-4.7 (docs.x.ai 2026-09-29): same row as 4.6 — 2/6, cached 0.5, 500k context; long-context
     // (>=200K) tier 4/1/12 NOT modeled. models.dev agrees; LiteLLM has no row yet.
     // Explicit so the id never falls through the suffix rule.
-    "grok-4.7": { input: 2.0, output: 6.0, cacheRead: 0.5, cacheCreation: 2.0, note: "docs.x.ai 2026-09-29; long-context (>=200K prompt) tier 4/1/12 NOT modeled; models.dev agrees, LiteLLM absent at add time" },
-    "grok-4.6": { input: 2.0, output: 6.0, cacheRead: 0.5, cacheCreation: 2.0, note: "docs.x.ai 2026-08-12, re-verified unchanged 2026-08-29 and 2026-09-29 (2/6/0.5; models.dev agrees); long-context (>=200K prompt) tier 4/1/12 NOT modeled" },
-    "grok-4.5": { input: 2.0, output: 6.0, cacheRead: 0.3, cacheCreation: 2.0, note: "docs.x.ai 2026-08-14 (cacheRead corrected 0.5->0.3 - the drift watch's first catch); long-context (>=200K) tier is higher and NOT modeled" },
-    "grok-4.3": { input: 1.25, output: 2.5, cacheRead: 0.2, cacheCreation: 1.25, note: "docs.x.ai 2026-07-10; long-context (>200K) tier is higher and NOT modeled" },
-    "grok-build-0.1": { input: 1.0, output: 2.0, cacheRead: 0.2, cacheCreation: 1.0, note: "docs.x.ai 2026-07-10" },
-    "grok-code-fast": { input: 1.0, output: 2.0, cacheRead: 0.2, cacheCreation: 1.0, note: "xAI alias of grok-build-0.1 (docs.x.ai 2026-07-10)" },
+    // 2026-11-01 re-read of docs.x.ai/developers/models: every grok-4.x row below is
+    // unchanged. The grok-4.20-0309 trio (reasoning / non-reasoning / multi-agent) is on
+    // the same page at 1.25/0.20/2.50 under 200K prompt tokens with a 1M context;
+    // long-context (>=200K) tier 2.50/0.40/5.00 NOT modeled. models.dev xai agrees on all
+    // three. grok-code-fast is no longer listed on the models page; its source row
+    // grok-build-0.1 still is, at the same rates, so the alias row stands (noted).
+    "grok-4.7": { input: 2.0, output: 6.0, cacheRead: 0.5, cacheCreation: 2.0, note: "docs.x.ai 2026-09-29, re-verified unchanged 2026-11-01; long-context (>=200K prompt) tier 4/1/12 NOT modeled; models.dev agrees, LiteLLM absent at add time" },
+    "grok-4.6": { input: 2.0, output: 6.0, cacheRead: 0.5, cacheCreation: 2.0, note: "docs.x.ai 2026-08-12, re-verified unchanged 2026-08-29, 2026-09-29 and 2026-11-01 (2/6/0.5; models.dev agrees); long-context (>=200K prompt) tier 4/1/12 NOT modeled" },
+    "grok-4.5": { input: 2.0, output: 6.0, cacheRead: 0.3, cacheCreation: 2.0, note: "docs.x.ai 2026-08-14 (cacheRead corrected 0.5->0.3 - the drift watch's first catch), re-verified unchanged 2026-11-01; long-context (>=200K) tier 4/0.6/12 NOT modeled" },
+    "grok-4.3": { input: 1.25, output: 2.5, cacheRead: 0.2, cacheCreation: 1.25, note: "docs.x.ai 2026-07-10, re-verified unchanged 2026-11-01; long-context (>=200K) tier 2.5/0.4/5 NOT modeled" },
+    "grok-4.20-0309-reasoning": { input: 1.25, output: 2.5, cacheRead: 0.2, cacheCreation: 1.25, note: "docs.x.ai 2026-11-01 (1.25/0.20/2.50 under 200K prompt tokens, 1M context); no cache-write charge -> cacheCreation = input; long-context (>=200K) tier 2.5/0.4/5 NOT modeled; models.dev agrees" },
+    "grok-4.20-0309-non-reasoning": { input: 1.25, output: 2.5, cacheRead: 0.2, cacheCreation: 1.25, note: "docs.x.ai 2026-11-01 (1.25/0.20/2.50 under 200K prompt tokens, 1M context); no cache-write charge -> cacheCreation = input; long-context (>=200K) tier 2.5/0.4/5 NOT modeled; models.dev agrees" },
+    "grok-4.20-multi-agent-0309": { input: 1.25, output: 2.5, cacheRead: 0.2, cacheCreation: 1.25, note: "docs.x.ai 2026-11-01 (1.25/0.20/2.50 under 200K prompt tokens, 1M context); no cache-write charge -> cacheCreation = input; long-context (>=200K) tier 2.5/0.4/5 NOT modeled; models.dev agrees" },
+    "grok-build-0.1": { input: 1.0, output: 2.0, cacheRead: 0.2, cacheCreation: 1.0, note: "docs.x.ai 2026-07-10, re-verified unchanged 2026-11-01 (256k context); long-context (>=200K) tier 2/0.4/4 NOT modeled" },
+    "grok-code-fast": { input: 1.0, output: 2.0, cacheRead: 0.2, cacheCreation: 1.0, note: "xAI alias of grok-build-0.1 (docs.x.ai 2026-07-10); NOT on the docs.x.ai models page as of 2026-11-01 -- grok-build-0.1 still is, at the same rates, so the alias row stands" },
   },
 };
 

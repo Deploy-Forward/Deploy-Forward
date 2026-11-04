@@ -23,6 +23,19 @@ test("a catalog row without a cache-write figure cannot drift on it", () => {
   assert.deepEqual(driftFor("grok-4.6", ours, "grok-4.6", entry(2, 6, 0.5)), []);
 });
 
+// 2026-11-01, exported-tree run: our glm-5 row was paired with LiteLLM's "mistral/glm-5-2"
+// -- that catalog's dash spelling of glm-5.2, a DIFFERENT product with its own row here --
+// and reported as drift against glm-5.2's rates. A dashed-digit remainder is a dated pin
+// of the shorter id only when no longer priced id claims the key.
+test("a catalog key that spells ANOTHER priced id with a dash is not a dated pin of the shorter id", () => {
+  const catalog = { "mistral/glm-5-2": entry(1.4, 4.4, 0.14), "moonshot/kimi-k2-0905": entry(0.6, 2.5, 0.15) };
+  assert.equal(lookupCatalog(catalog, "glm-5", ["glm-5", "glm-5.2"]), null, "glm-5-2 is glm-5.2's key, not glm-5's");
+  assert.equal(lookupCatalog(catalog, "glm-5.2", ["glm-5", "glm-5.2"]), null, "and the dotted id does not match the dashed key either (exact keys only)");
+  // The real dated-pin case is untouched: kimi-k2-0905 is still kimi-k2's own build pin,
+  // even with a longer kimi-k2.6 row present.
+  assert.equal(lookupCatalog(catalog, "kimi-k2", ["kimi-k2", "kimi-k2.6"])?.key, "moonshot/kimi-k2-0905");
+});
+
 test("lookupCatalog never reaches an azure/ or regional reseller row", () => {
   const catalog = { "azure/gpt-6-sol": entry(2, 10, 0.2), "azure/us/gpt-6-sol": entry(2.2, 11, 0.22), "us.anthropic.claude-opus-5": entry(5.5, 27.5, 0.55) };
   assert.equal(lookupCatalog(catalog, "gpt-6-sol"), null);
