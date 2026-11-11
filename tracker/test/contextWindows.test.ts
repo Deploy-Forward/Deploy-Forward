@@ -93,6 +93,18 @@ test("2026-11-01 rebase: new ids have windows and gpt-5.4-mini's wrong window is
   assert.equal(contextWindowForModel("gpt-5.3-codex"), 400_000); // models.dev openai, 2026-11-01
 });
 
+test("2026-11-10 rebase: Claude Fable 5.2 / Mythos 5.2 and Gemini 4 Carbon resolve; the Claude rows keep the family base", () => {
+  // platform.claude.com/docs/en/models/overview (read 2026-11-10): Claude Fable 5.2 "Context
+  // window 1M tokens", API id claude-fable-5-2. Held at the 200,000 family base per THE [1m]
+  // RULE (the 1M-base ruling asked for in PR #293 is still open), and explicit so the id never
+  // falls through the suffix rule to claude-fable-5's row.
+  assert.equal(contextWindowForModel("claude-fable-5-2"), 200_000);
+  assert.equal(contextWindowForModel("claude-mythos-5-2"), 200_000);
+  assert.equal(contextWindowForModel("claude-fable-5-2[1m]"), 1_000_000);
+  // models.dev google row and LiteLLM "gemini/gemini-4-carbon" both 1,048,576 (read 2026-11-10).
+  assert.equal(contextWindowForModel("gemini-4-carbon"), 1_048_576);
+});
+
 test("every model id the CLI prices (PRICES) also has a resolvable context window", () => {
   // The surface that prices a model must also know its window -- a model that shows up
   // in `usage --cost` but silently has no window would be the context-capacity analog

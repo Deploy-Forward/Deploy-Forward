@@ -52,18 +52,31 @@ export interface PricingTable {
  * Anthropic rows: every current row below was verified VERBATIM against
  * platform.claude.com/docs/en/about-claude/pricing on 2026-08-29 (input, output,
  * cache-hit, and 5m cache-write columns). Multipliers per that page: 5m write 1.25x
- * input, cache read 0.1x input — EXCEPT Fable 5.1 / Mythos 5.1, where cache reads
- * are 0.025x ($0.25). The 1h-TTL write (2x) is NOT modeled anywhere in this table.
- * Rebase ledger: 2026-11-01 (Marco: "rebase to the latest prices and models" — every
+ * input, cache read 0.1x input — EXCEPT Fable 5.2 / Mythos 5.2 (0.025x = $0.20),
+ * Fable 5.1 / Mythos 5.1 (0.025x = $0.25) and Opus 5.5 / Sonnet 5.5 (0.05x). The 1h-TTL
+ * write (2x) is NOT modeled anywhere in this table.
+ * Rebase ledger: 2026-11-10 (Marco: "push the latest with proper pricing. Fable 5.2 was
+ * released" — Fable 5.2 / Mythos 5.2 and Gemini 4 Carbon rowed; every Anthropic row
+ * re-read verbatim on that page, unchanged; Google page re-read, see its block),
+ * 2026-11-01 (Marco: "rebase to the latest prices and models" — every
  * Anthropic row re-read verbatim on that page, all unchanged; OpenAI, Google, xAI and
  * Zhipu pages re-read the same day, see the per-vendor blocks), 2026-08-29 (Marco:
  * "rebase the price-tracking"), prior 2026-08-14.
  */
 export const PRICING: PricingTable = {
-  version: 4,
+  version: 5,
   currency: "USD",
   per: 1_000_000,
   models: {
+    // Fable 5.2 / Mythos 5.2 (Verified verbatim at platform.claude.com/docs/en/about-claude/pricing
+    // 2026-11-10; the models overview page the same day: API id claude-fable-5-2, retirement
+    // "not sooner than November 9, 2027", so released 2026-11-09): $8 / $40, 5m write $10, cache
+    // read 0.025x = $0.20. The public daily guard reported the id on 2026-11-10 as "CURRENTLY
+    // PRICED VIA FALLBACK at 10/50 (cache read 1)": the digit-led suffix rule resolved it to
+    // claude-fable-5, so every cache read was overstated 5x and the id showed as "priced".
+    // Same lesson as 5.1 below -- the row must exist BEFORE the id appears in a transcript.
+    "claude-fable-5-2": { input: 8.0, output: 40.0, cacheRead: 0.2, cacheCreation: 10.0, note: "Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-11-10; cache read 0.025x ($0.20), not the 0.1x family default; LiteLLM native row agrees (8/40/0.2/10); fast mode 16/80 and batch 4/20 are billing modes, NOT modeled" },
+    "claude-mythos-5-2": { input: 8.0, output: 40.0, cacheRead: 0.2, cacheCreation: 10.0, note: "Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-11-10 (limited availability); cache read 0.025x ($0.20); LiteLLM native row agrees" },
     // Fable 5.1 / Mythos 5.1 (Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29): $10 / $50, 5m write $12.50, and a NEW cache-read
     // multiplier — 0.025x = $0.25 (all other models 0.1x). These rows MUST exist
     // explicitly: without them the suffix fallback resolved "claude-fable-5-1" to the
@@ -101,7 +114,7 @@ export const PRICING: PricingTable = {
     // Sonnet 5.5 (Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-09-29): same row as Sonnet 5 — $2 / $10, cache read $0.20, 5m write $2.50.
     // Explicit anyway: the fallback happened to land on the right numbers today, and a
     // row that is right by accident is one Sonnet-5 reprice away from being wrong.
-    "claude-sonnet-5-5": { input: 2.0, output: 10.0, cacheRead: 0.1, cacheCreation: 2.5, note: "Cache read 0.05x ($0.10): claude.com/pricing 2026-10-07 ('Read: $0.10 / MTok') and the platform.claude.com pricing page's prompt-caching section agree; that page's model table still shows $0.20; LiteLLM agrees at 0.1, models.dev still 0.2. Was 0.2 (verified 2026-09-29)" },
+    "claude-sonnet-5-5": { input: 2.0, output: 10.0, cacheRead: 0.1, cacheCreation: 2.5, note: "Cache read 0.05x ($0.10): claude.com/pricing 2026-10-07 ('Read: $0.10 / MTok') and the platform.claude.com pricing page's prompt-caching section agree; that page's model table agreed by 2026-11-10 ('$0.10 / MTok', footnote 2: 0.05x the base input price); LiteLLM agrees at 0.1. Was 0.2 (verified 2026-09-29)" },
     "claude-sonnet-5": { input: 2.0, output: 10.0, cacheRead: 0.2, cacheCreation: 2.5 },
     // Verified verbatim at platform.claude.com/docs/en/about-claude/pricing 2026-08-29
     "claude-sonnet-4-6": { input: 3.0, output: 15.0, cacheRead: 0.3, cacheCreation: 3.75 },
@@ -263,7 +276,11 @@ export const PRICING: PricingTable = {
     "gemini-3.5-flash": { input: 1.5, output: 9.0, cacheRead: 0.15, cacheCreation: 1.5, note: "NOT on the vendor pricing page as of 2026-11-01 (dropped between 2026-09-29 and 2026-11-01, as was 3.7-flash) -- rate stands as last verified ai.google.dev/gemini-api/docs/pricing 2026-09-29; models.dev still lists 1.5/9/0.15; context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge)" },
     "gemini-3.5-flash-lite": { input: 0.3, output: 2.5, cacheRead: 0.03, cacheCreation: 0.3, note: "ai.google.dev/gemini-api/docs/pricing 2026-09-29, re-verified unchanged 2026-11-01 (0.30/2.50/0.03); context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge)" },
     "gemini-flash-lite-latest": { input: 0.3, output: 2.5, cacheRead: 0.03, cacheCreation: 0.3, note: "alias of 3.5-flash-lite (models.dev 2026-09-29; vendor page lists no standalone row, re-checked 2026-11-01: still not mentioned); context caching is billed per token-hour of STORAGE, not per write token -> cacheCreation = input (no per-token write charge)" },
-    "gemini-4-argon": { input: 2.0, output: 10.0, cacheRead: 0.1, cacheCreation: 2.0, note: "ai.google.dev/gemini-api/docs/pricing 2026-11-01 ('$2.00 through November 30, 2026; $4.00 starting December 1, 2026' input; 10.00 -> 20.00 output; 0.10 -> 0.20 caching); implicit caching only -> cacheCreation = input; PROMOTIONAL through 2026-11-30 -- the 2026-12-01 increase is entered as a dated interval in the server timeline (ANNOUNCED_REPRICES), never pre-applied here; re-verify before 2026-12-01; not on the Free tier; models.dev agrees (2/10/0.1)" },
+    // gemini-4-carbon (released 2026-11-10; the public daily guard flagged it unpriced the same
+    // day): aistudio.google.com/docs/pricing read 2026-11-10 (ai.google.dev/gemini-api/docs/pricing
+    // now redirects there) -- the SAME promotional row and 2026-12-01 increase as argon below.
+    "gemini-4-carbon": { input: 2.0, output: 10.0, cacheRead: 0.1, cacheCreation: 2.0, note: "ai.google.dev/gemini-api/docs/pricing -> aistudio.google.com/docs/pricing 2026-11-10 ('$2.00 through November 30, 2026; $4.00 starting December 1, 2026' input; 10.00 -> 20.00 output; 0.10 -> 0.20 caching); implicit caching only -> cacheCreation = input; PROMOTIONAL through 2026-11-30 -- the 2026-12-01 increase is a dated interval in the server timeline (ANNOUNCED_REPRICES), never pre-applied here; re-verify before 2026-12-01; not on the Free tier; LiteLLM gemini/ row agrees (2/10/0.1)" },
+    "gemini-4-argon": { input: 2.0, output: 10.0, cacheRead: 0.1, cacheCreation: 2.0, note: "ai.google.dev/gemini-api/docs/pricing 2026-11-01 ('$2.00 through November 30, 2026; $4.00 starting December 1, 2026' input; 10.00 -> 20.00 output; 0.10 -> 0.20 caching); implicit caching only -> cacheCreation = input; PROMOTIONAL through 2026-11-30 -- the 2026-12-01 increase is entered as a dated interval in the server timeline (ANNOUNCED_REPRICES), never pre-applied here; re-verify before 2026-12-01; not on the Free tier; models.dev agrees (2/10/0.1); re-verified 2026-11-10 unchanged (the page now lives at aistudio.google.com/docs/pricing)" },
     "gemini-3.1-pro-preview": { input: 2.0, output: 12.0, cacheRead: 0.2, cacheCreation: 2.0, note: "ai.google.dev/gemini-api/docs/pricing 2026-11-01 (<=200k-token tier 2.00/12.00/0.20); >200k tier 4.00/18.00/0.40 NOT modeled; cache storage (4.50 per 1M token-hour) not modeled -> cacheCreation = input; the vendor's own id carries -preview (D1: exact key, never borrows the gemini-3-pro row)" },
     "gemini-3.1-flash-lite": { input: 0.25, output: 1.5, cacheRead: 0.025, cacheCreation: 0.25, note: "ai.google.dev/gemini-api/docs/pricing 2026-11-01 (text/image/video 0.25/1.50/0.025; audio input 0.50 / caching 0.05 NOT modeled); cache storage billed per token-hour -> cacheCreation = input" },
     "gemini-3-flash-preview": { input: 0.5, output: 3.0, cacheRead: 0.05, cacheCreation: 0.5, note: "ai.google.dev/gemini-api/docs/pricing 2026-11-01 (text/image/video 0.50/3.00/0.05; audio input 1.00 / caching 0.10 NOT modeled); cache storage billed per token-hour -> cacheCreation = input; the vendor's own id (D1: exact key wins over the bare gemini-3-flash row)" },

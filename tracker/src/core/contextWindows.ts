@@ -66,6 +66,12 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   // never falls through the suffix rule to a sibling's entry.
   "claude-fable-5-1": 200_000,
   "claude-mythos-5-1": 200_000,
+  // Fable 5.2 / Mythos 5.2 (platform.claude.com models overview read 2026-11-10: "Context window
+  // 1M tokens"; LiteLLM max_input_tokens 1,000,000): kept at the 200,000 family base per THE
+  // [1m] RULE above -- the 1M-base ruling asked for in PR #293 is still open. Explicit rows so
+  // the id never falls through the suffix rule to claude-fable-5's entry.
+  "claude-fable-5-2": 200_000,
+  "claude-mythos-5-2": 200_000,
   // VERIFY-family: absent from the LiteLLM catalog entirely (2026-07-17 fetch) -- no
   // vendor entry exists to check against. Typed from the family's known base window.
   "claude-mythos-5": 200_000,
@@ -222,6 +228,7 @@ export const CONTEXT_WINDOWS: Record<string, number> = {
   // gemini-3-flash-preview / gemini-3.1-pro-preview are the vendor's own ids (D1 ruling:
   // a -preview id never borrows a family row, so each gets its own entry).
   "gemini-4-argon": 1_048_576,
+  "gemini-4-carbon": 1_048_576, // models.dev google row + LiteLLM gemini/gemini-4-carbon, read 2026-11-10
   "gemini-3.1-pro-preview": 1_048_576,
   "gemini-3.1-flash-lite": 1_048_576,
   "gemini-3-flash-preview": 1_048_576,
