@@ -794,7 +794,34 @@
     "cacheRead": 0.2,
     "cacheCreation": 4
    }
+  ],
+  "claude-fable-5-2": [
+   {
+    "d": "2026-11-11",
+    "input": 8,
+    "output": 40,
+    "cacheRead": 0.2,
+    "cacheCreation": 10
+   }
+  ],
+  "claude-mythos-5-2": [
+   {
+    "d": "2026-11-11",
+    "input": 8,
+    "output": 40,
+    "cacheRead": 0.2,
+    "cacheCreation": 10
+   }
+  ],
+  "gemini-4-carbon": [
+   {
+    "d": "2026-11-11",
+    "input": 2,
+    "output": 10,
+    "cacheRead": 0.1,
+    "cacheCreation": 2
+   }
   ]
  },
- "updatedAt": "2026-11-10T20:28:38.682Z"
+ "updatedAt": "2026-11-11T14:45:07.969Z"
 }
