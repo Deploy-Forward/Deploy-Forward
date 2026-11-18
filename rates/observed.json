@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-11-17T21:46:15.209Z",
+  "generatedAt": "2026-11-18T21:26:20.259Z",
   "note": "Automated multi-source observation. The canonical table remains hand-verified against vendor pages; per-row `agreement` states how the sources relate. Never treat an aggregator value as vendor truth.",
   "canonicalTableVersion": 5,
   "sources": {
     "litellm": {
       "url": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
-      "fetchedAt": "2026-11-17T21:46:15.209Z"
+      "fetchedAt": "2026-11-18T21:26:20.259Z"
     },
     "modelsDev": {
       "url": "https://models.dev/api.json",
-      "fetchedAt": "2026-11-17T21:46:15.209Z"
+      "fetchedAt": "2026-11-18T21:26:20.259Z"
     }
   },
   "models": {
@@ -1438,12 +1438,12 @@
       },
       "litellm": {
         "key": "gpt-6-rosalind",
-        "input": 15,
-        "output": 75,
-        "cacheRead": 1.5
+        "input": 10,
+        "output": 50,
+        "cacheRead": 1
       },
       "modelsDev": null,
-      "agreement": "all-agree"
+      "agreement": "drifts-from-canonical"
     },
     "gpt-6-sol": {
       "canonical": {
